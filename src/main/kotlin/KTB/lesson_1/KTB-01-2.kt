@@ -9,9 +9,12 @@ fun main() {
     try {
         if (!wordsFile.exists()) {
             wordsFile.createNewFile()
-            wordsFile.writeText("hello привет\n")
-            wordsFile.appendText("dog собака\n")
-            wordsFile.appendText("cat кошка\n")
+            wordsFile.writeText("hello привет")
+            wordsFile.appendText("\n")
+            wordsFile.appendText("dog собака")
+            wordsFile.appendText("\n")
+            wordsFile.appendText("cat кошка")
+            wordsFile.appendText("\n")
         }
 
         wordsFile.readLines().forEach { line ->
