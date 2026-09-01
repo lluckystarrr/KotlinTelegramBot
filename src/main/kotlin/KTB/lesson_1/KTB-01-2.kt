@@ -2,7 +2,7 @@ package org.example.KTB.lesson_1
 
 import java.io.File
 
-class Word(
+data class Word(  // изменили class на data class
     val original: String,
     val translate: String,
     var correctAnswersCount: Int = 0
