@@ -39,11 +39,11 @@ fun loadDictionary(): List<Word> {
     try {
         if (!wordsFile.exists()) {
             wordsFile.createNewFile()
-            wordsFile.writeText("hello привет")
+            wordsFile.writeText("hello|привет|0")
             wordsFile.appendText("\n")
-            wordsFile.appendText("dog собака")
+            wordsFile.appendText("dog|собака|0")
             wordsFile.appendText("\n")
-            wordsFile.appendText("cat кошка")
+            wordsFile.appendText("cat|кошка|0")
             wordsFile.appendText("\n")
         }
 
