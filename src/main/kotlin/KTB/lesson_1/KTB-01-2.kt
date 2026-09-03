@@ -2,22 +2,49 @@ package org.example.KTB.lesson_1
 
 import java.io.File
 
-data class Word(  // изменили class на data class
+data class Word(
     val original: String,
     val translate: String,
     var correctAnswersCount: Int = 0
 )
 
 fun main() {
+    val dictionary = loadDictionary()
+
+    while (true) {
+        println("\nМеню:")
+        println("1. Учить слова")
+        println("2. Статистика")
+        println("0. Выход")
+        print("Выберите пункт: ")
+
+        val input = readlnOrNull() ?: ""
+
+        when (input) {
+            "1" -> println("Вы выбрали пункт 'Учить слова'")
+            "2" -> println("Вы выбрали пункт 'Статистика'")
+            "0" -> {
+                println("До свидания!")
+                break
+            }
+            else -> println("Введите число 1, 2 или 0")
+        }
+    }
+}
+
+fun loadDictionary(): List<Word> {
     val wordsFile = File("words.txt")
     val dictionary = mutableListOf<Word>()
 
     try {
         if (!wordsFile.exists()) {
             wordsFile.createNewFile()
-            wordsFile.writeText("hello|привет|0\n")
-            wordsFile.appendText("dog|собака|0\n")
-            wordsFile.appendText("cat|кошка|0\n")
+            wordsFile.writeText("hello|привет|0")
+            wordsFile.appendText("\n")
+            wordsFile.appendText("dog|собака|0")
+            wordsFile.appendText("\n")
+            wordsFile.appendText("cat|кошка|0")
+            wordsFile.appendText("\n")
         }
 
         val lines: List<String> = wordsFile.readLines()
@@ -31,11 +58,12 @@ fun main() {
                 if (original.isNotBlank() && translate.isNotBlank()) {
                     val word = Word(original, translate, correctAnswersCount)
                     dictionary.add(word)
-                    println(word)
                 }
             }
         }
     } catch (e: Exception) {
         println(e.message)
     }
+
+    return dictionary
 }
