@@ -21,7 +21,58 @@ fun main() {
         val input = readlnOrNull() ?: ""
 
         when (input) {
-            "1" -> println("Вы выбрали пункт 'Учить слова'")
+            "1" -> {
+                val notLearnedList = dictionary.filter { it.correctAnswersCount < 3 }.toMutableList()
+
+                if (notLearnedList.isEmpty()) {
+                    println("Все слова в словаре выучены!")
+                    continue
+                }
+
+                while (notLearnedList.isNotEmpty()) {
+                    val wordsToTake = if (notLearnedList.size >= 4) 4 else notLearnedList.size
+                    val questionWords = notLearnedList.shuffled().take(wordsToTake)
+                    val correctAnswer = questionWords.random()
+
+                    val variants = questionWords.shuffled()
+
+                    println("\n${correctAnswer.original}:")
+                    variants.forEachIndexed { index, word ->
+                        println(" ${index + 1} - ${word.translate}")
+                    }
+
+                    print("Ваш выбор (1-${variants.size}): ")
+                    val userChoice = readlnOrNull()?.toIntOrNull()
+
+                    when (userChoice) {
+                        null -> println("Введите число от 1 до ${variants.size}")
+                        in 1..variants.size -> {
+                            val selectedWord = variants[userChoice - 1]
+                            if (selectedWord == correctAnswer) {
+                                println("Правильно!")
+                                correctAnswer.correctAnswersCount++
+                                val wordInDictionary = dictionary.find { it.original == correctAnswer.original }
+                                wordInDictionary?.correctAnswersCount = correctAnswer.correctAnswersCount
+
+                                if (correctAnswer.correctAnswersCount >= 3) {
+                                    notLearnedList.remove(correctAnswer)
+                                    println("Слово выучено!")
+                                }
+                            } else {
+                                println("Неправильно! Правильный ответ: ${correctAnswer.translate}")
+                            }
+                        }
+                        else -> println("Введите число от 1 до ${variants.size}")
+                    }
+
+                    if (notLearnedList.isEmpty()) {
+                        println("\nПоздравляем! Все слова выучены!")
+                        break
+                    }
+
+                    println("\nПродолжаем обучение")
+                }
+            }
             "2" -> {
                 val totalCount = dictionary.size
                 val learnedCount = dictionary.filter { it.correctAnswersCount >= 3 }.size
@@ -55,6 +106,13 @@ fun loadDictionary(): List<Word> {
             wordsFile.appendText("\n")
             wordsFile.appendText("cat|кошка|0")
             wordsFile.appendText("\n")
+            wordsFile.appendText("apple|яблоко|0")
+            wordsFile.appendText("\n")
+            wordsFile.appendText("book|книга|0")
+            wordsFile.appendText("\n")
+            wordsFile.appendText("sun|солнце|0")
+            wordsFile.appendText("\n")
+            wordsFile.appendText("moon|луна|0")
         }
 
         val lines: List<String> = wordsFile.readLines()
