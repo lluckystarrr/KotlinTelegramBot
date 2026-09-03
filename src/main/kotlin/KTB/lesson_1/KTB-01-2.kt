@@ -22,7 +22,6 @@ fun main() {
 
         when (input) {
             "1" -> {
-                // Режим изучения слов
                 val notLearnedList = dictionary.filter { it.correctAnswersCount < 3 }.toMutableList()
 
                 if (notLearnedList.isEmpty()) {
