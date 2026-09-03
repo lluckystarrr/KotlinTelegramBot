@@ -30,7 +30,8 @@ fun main() {
                 }
 
                 while (notLearnedList.isNotEmpty()) {
-                    val questionWords = notLearnedList.shuffled().take(4)
+                    val wordsToTake = if (notLearnedList.size >= 4) 4 else notLearnedList.size
+                    val questionWords = notLearnedList.shuffled().take(wordsToTake)
                     val correctAnswer = questionWords.random()
 
                     val variants = questionWords.shuffled()
@@ -40,12 +41,12 @@ fun main() {
                         println(" ${index + 1} - ${word.translate}")
                     }
 
-                    print("Ваш выбор (1-4): ")
+                    print("Ваш выбор (1-${variants.size}): ")
                     val userChoice = readlnOrNull()?.toIntOrNull()
 
                     when (userChoice) {
-                        null -> println("Введите число от 1 до 4")
-                        in 1..4 -> {
+                        null -> println("Введите число от 1 до ${variants.size}")
+                        in 1..variants.size -> {
                             val selectedWord = variants[userChoice - 1]
                             if (selectedWord == correctAnswer) {
                                 println("Правильно!")
@@ -61,7 +62,7 @@ fun main() {
                                 println("Неправильно! Правильный ответ: ${correctAnswer.translate}")
                             }
                         }
-                        else -> println("Введите число от 1 до 4")
+                        else -> println("Введите число от 1 до ${variants.size}")
                     }
 
                     if (notLearnedList.isEmpty()) {
