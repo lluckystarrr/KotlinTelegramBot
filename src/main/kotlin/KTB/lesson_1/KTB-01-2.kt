@@ -15,6 +15,7 @@ fun main() {
         when (input) {
             "1" -> {
                 var question = trainer.getNextQuestion()
+                var currentQuestion = question ?: continue
 
                 if (question == null) {
                     println("Все слова в словаре выучены!")
@@ -22,20 +23,15 @@ fun main() {
                 }
 
                 while (true) {
-                    val currentQuestion = question  // сохраняем в локальную переменную
-
-                    println("\n${currentQuestion?.correctAnswer?.original}:")
-                    currentQuestion?.variants?.forEachIndexed { index, word ->
-                        println(" ${index + 1} - ${word.translate}")
-                    }
-                    println(" ----------")
-                    println(" 0 - Меню")
+                    // Используем extension-функцию для вывода вопроса
+                    println(currentQuestion.asConsoleString())
                     print("Ваш выбор: ")
 
                     val userInput = readlnOrNull()?.toIntOrNull()
+                    val variantsCount = currentQuestion.variants.size
 
                     if (userInput == null) {
-                        println("Введите число от 0 до ${currentQuestion?.variants?.size}")
+                        println("Введите число от 0 до $variantsCount")
                         continue
                     }
 
@@ -44,17 +40,17 @@ fun main() {
                             println("Возврат в главное меню...")
                             break
                         }
-                        in 1..currentQuestion?.variants?.size!! -> {
+                        in 1..variantsCount -> {
                             val userAnswerIndex = userInput - 1
                             val isCorrect = trainer.checkAnswer(userAnswerIndex)
 
                             if (isCorrect) {
                                 println("Правильно!")
-                                if (currentQuestion?.correctAnswer!!.isLearned()!!) {
+                                if (currentQuestion.correctAnswer.isLearned()) {
                                     println("Слово выучено!")
                                 }
                             } else {
-                                println("Неправильно! ${currentQuestion?.correctAnswer?.original} – это ${currentQuestion?.correctAnswer?.translate}")
+                                println("Неправильно! ${currentQuestion.correctAnswer.original} – это ${currentQuestion.correctAnswer.translate}")
                             }
 
                             val nextQuestion = trainer.getNextQuestion()
@@ -63,10 +59,11 @@ fun main() {
                                 break
                             }
                             question = nextQuestion
+                            currentQuestion = question ?: continue
                             println("\nПродолжаем обучение")
                         }
                         else -> {
-                            println("Введите число от 0 до ${currentQuestion.variants.size}")
+                            println("Введите число от 0 до $variantsCount")
                         }
                     }
                 }
@@ -84,4 +81,12 @@ fun main() {
             }
         }
     }
+}
+
+fun Question.asConsoleString(): String {
+    val variantsString = variants.mapIndexed { index, word ->
+        " ${index + 1} - ${word.translate}"
+    }.joinToString("\n")
+
+    return "\n${correctAnswer.original}:\n$variantsString\n ----------\n 0 - Меню"
 }
