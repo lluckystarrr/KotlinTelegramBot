@@ -33,36 +33,42 @@ fun main() {
                     val wordsToTake = if (notLearnedList.size >= 4) 4 else notLearnedList.size
                     val questionWords = notLearnedList.shuffled().take(wordsToTake)
                     val correctAnswer = questionWords.random()
-
                     val variants = questionWords.shuffled()
 
                     println("\n${correctAnswer.original}:")
                     variants.forEachIndexed { index, word ->
                         println(" ${index + 1} - ${word.translate}")
                     }
+                    println(" ----------")
+                    println(" 0 - Меню")
 
-                    print("Ваш выбор (1-${variants.size}): ")
-                    val userChoice = readlnOrNull()?.toIntOrNull()
+                    print("Ваш выбор: ")
+                    val userAnswerInput = readlnOrNull()?.toIntOrNull()
 
-                    when (userChoice) {
-                        null -> println("Введите число от 1 до ${variants.size}")
+                    when (userAnswerInput) {
+                        null -> println("Введите число от 0 до ${variants.size}")
+                        0 -> {
+                            println("Возврат в главное меню...")
+                            break
+                        }
                         in 1..variants.size -> {
-                            val selectedWord = variants[userChoice - 1]
+                            val selectedWord = variants[userAnswerInput - 1]
                             if (selectedWord == correctAnswer) {
                                 println("Правильно!")
                                 correctAnswer.correctAnswersCount++
                                 val wordInDictionary = dictionary.find { it.original == correctAnswer.original }
                                 wordInDictionary?.correctAnswersCount = correctAnswer.correctAnswersCount
+                                saveDictionary(dictionary)
 
                                 if (correctAnswer.correctAnswersCount >= 3) {
                                     notLearnedList.remove(correctAnswer)
                                     println("Слово выучено!")
                                 }
                             } else {
-                                println("Неправильно! Правильный ответ: ${correctAnswer.translate}")
+                                println("Неправильно! ${correctAnswer.original} – это ${correctAnswer.translate}")
                             }
                         }
-                        else -> println("Введите число от 1 до ${variants.size}")
+                        else -> println("Введите число от 0 до ${variants.size}")
                     }
 
                     if (notLearnedList.isEmpty()) {
@@ -134,4 +140,17 @@ fun loadDictionary(): List<Word> {
     }
 
     return dictionary
+}
+
+fun saveDictionary(dictionary: List<Word>) {
+    val wordsFile = File("words.txt")
+
+    try {
+        val content = dictionary.joinToString("\n") { word ->
+            "${word.original}|${word.translate}|${word.correctAnswersCount}"
+        }
+        wordsFile.writeText(content)
+    } catch (e: Exception) {
+        println("Ошибка при сохранении словаря: ${e.message}")
+    }
 }
