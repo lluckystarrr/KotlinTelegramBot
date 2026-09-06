@@ -14,16 +14,14 @@ fun main() {
 
         when (input) {
             "1" -> {
-                var question = trainer.getNextQuestion()
-                var currentQuestion = question ?: continue
-
+                val question = trainer.getNextQuestion()
                 if (question == null) {
                     println("Все слова в словаре выучены!")
                     continue
                 }
+                var currentQuestion: Question = question
 
                 while (true) {
-                    // Используем extension-функцию для вывода вопроса
                     println(currentQuestion.asConsoleString())
                     print("Ваш выбор: ")
 
@@ -58,8 +56,7 @@ fun main() {
                                 println("\nПоздравляем! Все слова выучены!")
                                 break
                             }
-                            question = nextQuestion
-                            currentQuestion = question ?: continue
+                            currentQuestion = nextQuestion
                             println("\nПродолжаем обучение")
                         }
                         else -> {
