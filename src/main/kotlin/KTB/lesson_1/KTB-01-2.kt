@@ -1,7 +1,13 @@
 package org.example.KTB.lesson_1
 
 fun main() {
-    val trainer = LearnWordsTrainer()
+    val answersCountToLearn = 3
+    val numberOfQuestionWords = 4
+
+    val trainer = LearnWordsTrainer(
+        answersCountToLearn = answersCountToLearn,
+        numberOfQuestionWords = numberOfQuestionWords
+    )
 
     while (true) {
         println("\nМеню:")
@@ -14,12 +20,14 @@ fun main() {
 
         when (input) {
             "1" -> {
-                val question = trainer.getNextQuestion()
-                if (question == null) {
+                val firstQuestion = trainer.getNextQuestion()
+
+                if (firstQuestion == null) {
                     println("Все слова в словаре выучены!")
                     continue
                 }
-                var currentQuestion: Question = question
+
+                var currentQuestion: Question = firstQuestion
 
                 while (true) {
                     println(currentQuestion.asConsoleString())
@@ -38,41 +46,61 @@ fun main() {
                             println("Возврат в главное меню...")
                             break
                         }
+
                         in 1..variantsCount -> {
                             val userAnswerIndex = userInput - 1
                             val isCorrect = trainer.checkAnswer(userAnswerIndex)
 
                             if (isCorrect) {
                                 println("Правильно!")
-                                if (currentQuestion.correctAnswer.isLearned()) {
+
+                                if (
+                                    currentQuestion.correctAnswer.isLearned(
+                                        answersCountToLearn
+                                    )
+                                ) {
                                     println("Слово выучено!")
                                 }
                             } else {
-                                println("Неправильно! ${currentQuestion.correctAnswer.original} – это ${currentQuestion.correctAnswer.translate}")
+                                println(
+                                    "Неправильно! " +
+                                            "${currentQuestion.correctAnswer.original} – это " +
+                                            currentQuestion.correctAnswer.translate
+                                )
                             }
 
                             val nextQuestion = trainer.getNextQuestion()
+
                             if (nextQuestion == null) {
                                 println("\nПоздравляем! Все слова выучены!")
                                 break
                             }
+
                             currentQuestion = nextQuestion
                             println("\nПродолжаем обучение")
                         }
+
                         else -> {
                             println("Введите число от 0 до $variantsCount")
                         }
                     }
                 }
             }
+
             "2" -> {
                 val statistics = trainer.getStatistics()
-                println("Выучено ${statistics.learned} из ${statistics.total} слов | ${statistics.percent}%")
+
+                println(
+                    "Выучено ${statistics.learned} из ${statistics.total} слов | " +
+                            "${statistics.percent}%"
+                )
             }
+
             "0" -> {
                 println("До свидания!")
                 return
             }
+
             else -> {
                 println("Введите число 1, 2 или 0")
             }
@@ -81,9 +109,14 @@ fun main() {
 }
 
 fun Question.asConsoleString(): String {
-    val variantsString = variants.mapIndexed { index, word ->
-        " ${index + 1} - ${word.translate}"
-    }.joinToString("\n")
+    val variantsString = variants
+        .mapIndexed { index, word ->
+            " ${index + 1} - ${word.translate}"
+        }
+        .joinToString("\n")
 
-    return "\n${correctAnswer.original}:\n$variantsString\n ----------\n 0 - Меню"
+    return "\n${correctAnswer.original}:\n" +
+            "$variantsString\n" +
+            " ----------\n" +
+            " 0 - Меню"
 }

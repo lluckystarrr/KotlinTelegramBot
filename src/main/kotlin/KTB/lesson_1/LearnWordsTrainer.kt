@@ -7,7 +7,9 @@ data class Word(
     val translate: String,
     var correctAnswersCount: Int = 0
 ) {
-    fun isLearned(): Boolean = correctAnswersCount >= 3
+    fun isLearned(answersCountToLearn: Int): Boolean {
+        return correctAnswersCount >= answersCountToLearn
+    }
 }
 
 data class Statistics(
@@ -21,27 +23,51 @@ data class Question(
     val correctAnswer: Word
 )
 
-class LearnWordsTrainer {
+class LearnWordsTrainer(
+    private val answersCountToLearn: Int = 3,
+    private val numberOfQuestionWords: Int = 4
+) {
     private var question: Question? = null
     private val dictionary = loadDictionary()
 
     fun getStatistics(): Statistics {
-        val learned = dictionary.filter { it.correctAnswersCount >= 3 }.size
+        val learned = dictionary.count {
+            it.isLearned(answersCountToLearn)
+        }
         val total = dictionary.size
-        val percent = if (total > 0) learned * 100 / total else 0
-        return Statistics(learned, total, percent)
+        val percent = if (total > 0) {
+            learned * 100 / total
+        } else {
+            0
+        }
+
+        return Statistics(
+            learned = learned,
+            total = total,
+            percent = percent
+        )
     }
 
     fun getNextQuestion(): Question? {
-        val notLearnedList = dictionary.filter { it.correctAnswersCount < 3 }
-        if (notLearnedList.isEmpty()) return null
+        val notLearnedWords = dictionary.filterNot {
+            it.isLearned(answersCountToLearn)
+        }
 
-        val wordsToTake = if (notLearnedList.size >= 4) 4 else notLearnedList.size
-        val questionWords = notLearnedList.shuffled().take(wordsToTake)
-        val correctAnswer = questionWords.random()
+        if (notLearnedWords.isEmpty()) {
+            return null
+        }
+
+        val correctAnswer = notLearnedWords.random()
+
+        val otherVariants = dictionary
+            .filter { it !== correctAnswer }
+            .shuffled()
+            .take((numberOfQuestionWords - 1).coerceAtLeast(0))
+
+        val variants = (otherVariants + correctAnswer).shuffled()
 
         question = Question(
-            variants = questionWords.shuffled(),
+            variants = variants,
             correctAnswer = correctAnswer
         )
 
@@ -49,10 +75,12 @@ class LearnWordsTrainer {
     }
 
     fun checkAnswer(userAnswerIndex: Int?): Boolean {
-        return question?.let {
-            val correctAnswerId = it.variants.indexOf(it.correctAnswer)
-            if (correctAnswerId == userAnswerIndex) {
-                it.correctAnswer.correctAnswersCount++
+        return question?.let { currentQuestion ->
+            val correctAnswerIndex =
+                currentQuestion.variants.indexOf(currentQuestion.correctAnswer)
+
+            if (correctAnswerIndex == userAnswerIndex) {
+                currentQuestion.correctAnswer.correctAnswersCount++
                 saveDictionary(dictionary)
                 true
             } else {
@@ -82,10 +110,17 @@ class LearnWordsTrainer {
                     val splitLine = line.split("|")
                     val original = splitLine.getOrNull(0) ?: ""
                     val translate = splitLine.getOrNull(1) ?: ""
-                    val correctAnswersCount = splitLine.getOrNull(2)?.toIntOrNull() ?: 0
+                    val correctAnswersCount =
+                        splitLine.getOrNull(2)?.toIntOrNull() ?: 0
 
                     if (original.isNotBlank() && translate.isNotBlank()) {
-                        dictionary.add(Word(original, translate, correctAnswersCount))
+                        dictionary.add(
+                            Word(
+                                original = original,
+                                translate = translate,
+                                correctAnswersCount = correctAnswersCount
+                            )
+                        )
                     }
                 }
             }
@@ -98,10 +133,15 @@ class LearnWordsTrainer {
 
     private fun saveDictionary(words: List<Word>) {
         val wordsFile = File("words.txt")
+
         try {
             wordsFile.writeText("")
+
             for (word in words) {
-                wordsFile.appendText("${word.original}|${word.translate}|${word.correctAnswersCount}\n")
+                wordsFile.appendText(
+                    "${word.original}|${word.translate}|" +
+                            "${word.correctAnswersCount}\n"
+                )
             }
         } catch (e: Exception) {
             println("Ошибка при сохранении словаря: ${e.message}")
