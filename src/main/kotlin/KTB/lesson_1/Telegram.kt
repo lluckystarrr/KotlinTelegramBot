@@ -29,8 +29,9 @@ fun main(args: Array<String>) {
         updateId = updateIdString.toInt() + 1
 
         val messageTextRegex = "\"text\":\"(.*?)\"".toRegex()
-        val matchResultText = messageTextRegex.find(updates)
-        val text = matchResultText?.groups?.get(1)?.value
+        val allTextMatches = messageTextRegex.findAll(updates)
+        val lastTextMatch = allTextMatches.lastOrNull()
+        val text = lastTextMatch?.groups?.get(1)?.value
         if (text != null) {
             println(text)
         }
