@@ -13,23 +13,29 @@ fun main(args: Array<String>) {
 
     val client: HttpClient = HttpClient.newBuilder().build()
 
+    val updateIdRegex = "\"update_id\":\\s*(\\d+)".toRegex()
+    val messageTextRegex = "\"text\":\\s*\"(.*?)\"".toRegex()
+
     while (true) {
         Thread.sleep(2000)
-        val updates: String = getUpdates(client, botToken, updateId)
+
+        val updates = getUpdates(client, botToken, updateId)
         println(updates)
 
-        val updateIdRegex = "\"update_id\":\\s*(\\d+)".toRegex()
-        val firstMatch = updateIdRegex.find(updates)
-        if (firstMatch == null) continue
+        val lastUpdateStart = updates.lastIndexOf("\"update_id\"")
+        if (lastUpdateStart == -1) continue
 
-        val updateIdString = firstMatch.groups[1]?.value ?: continue
+        val lastUpdate = updates.substring(lastUpdateStart)
+
+        val updateIdMatch = updateIdRegex.find(lastUpdate) ?: continue
+        val updateIdString = updateIdMatch.groups[1]?.value ?: continue
+
         println(updateIdString)
-
         updateId = updateIdString.toInt() + 1
 
-        val messageTextRegex = "\"text\":\"(.*?)\"".toRegex()
-        val textMatch = messageTextRegex.find(updates)
+        val textMatch = messageTextRegex.find(lastUpdate)
         val text = textMatch?.groups?.get(1)?.value
+
         if (text != null) {
             println(text)
         }
@@ -38,9 +44,15 @@ fun main(args: Array<String>) {
 
 fun getUpdates(client: HttpClient, botToken: String, updateId: Int): String {
     val urlGetUpdates = "$TELEGRAM_API_BASE$botToken/getUpdates?offset=$updateId"
-    val request: HttpRequest = HttpRequest.newBuilder()
+
+    val request = HttpRequest.newBuilder()
         .uri(URI.create(urlGetUpdates))
         .build()
-    val response = client.send(request, HttpResponse.BodyHandlers.ofString())
+
+    val response = client.send(
+        request,
+        HttpResponse.BodyHandlers.ofString()
+    )
+
     return response.body()
 }
