@@ -18,31 +18,31 @@ fun main(args: Array<String>) {
         val updates: String = getUpdates(client, botToken, updateId)
         println(updates)
 
-        val startUpdateId = updates.indexOf("update_id")
-        if (startUpdateId == -1) continue
+        val updateIdRegex = "\"update_id\":\\s*(\\d+)".toRegex()
+        val matchResult = updateIdRegex.find(updates)
+        if (matchResult == null) continue
 
-        var endUpdateId = startUpdateId + 11
-        while (endUpdateId < updates.length && updates[endUpdateId].isDigit()) {
-            endUpdateId++
-        }
-        if (endUpdateId == startUpdateId + 11) continue
-
-        val updateIdString = updates.substring(startUpdateId + 11, endUpdateId)
+        val updateIdString = matchResult.groupValues[1]
         println(updateIdString)
 
         updateId = updateIdString.toInt() + 1
 
         val messageTextRegex: Regex = "\"text\":\"(.+?)\"".toRegex()
-        val matchResult: MatchResult? = messageTextRegex.find(updates)
-        val groups = matchResult?.groups
+        val matchResultText = messageTextRegex.find(updates)
+        val groups = matchResultText?.groups
         val text = groups?.get(1)?.value
-        println(text)
+
+        if (text != null) {
+            println(text)
+        }
     }
 }
 
 fun getUpdates(client: HttpClient, botToken: String, updateId: Int): String {
     val urlGetUpdates = "$TELEGRAM_API_BASE$botToken/getUpdates?offset=$updateId"
-    val request: HttpRequest = HttpRequest.newBuilder().uri(URI.create(urlGetUpdates)).build()
+    val request: HttpRequest = HttpRequest.newBuilder()
+        .uri(URI.create(urlGetUpdates))
+        .build()
     val response = client.send(request, HttpResponse.BodyHandlers.ofString())
     return response.body()
 }
