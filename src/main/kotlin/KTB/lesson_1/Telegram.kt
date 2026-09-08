@@ -9,19 +9,35 @@ const val TELEGRAM_API_BASE = "https://api.telegram.org/bot"
 
 fun main(args: Array<String>) {
     val botToken = args[0]
-
-    val urlGetMe = "$TELEGRAM_API_BASE$botToken/getMe"
-    val urlGetUpdates = "$TELEGRAM_API_BASE$botToken/getUpdates"
+    var updateId = 0
 
     val client: HttpClient = HttpClient.newBuilder().build()
 
-    val requestGetUpdates: HttpRequest = HttpRequest.newBuilder().uri(URI.create(urlGetUpdates)).build()
+    while (true) {
+        Thread.sleep(2000)
+        val updates: String = getUpdates(client, botToken, updateId)
+        println(updates)
 
-    val requestGetMe: HttpRequest = HttpRequest.newBuilder().uri(URI.create(urlGetMe)).build()
+        val startUpdateId = updates.indexOf("update_id")
+        if (startUpdateId == -1) continue
 
-    val responseUpdates = client.send(requestGetUpdates, HttpResponse.BodyHandlers.ofString())
-    val responseMe = client.send(requestGetMe, HttpResponse.BodyHandlers.ofString())
+        var endUpdateId = startUpdateId + 11
+        while (endUpdateId < updates.length && updates[endUpdateId].isDigit()) {
+            endUpdateId++
+        }
 
-    println(responseUpdates.body())
-    println(responseMe.body())
+        if (endUpdateId == startUpdateId + 11) continue
+
+        val updateIdString = updates.substring(startUpdateId + 11, endUpdateId)
+        println(updateIdString)
+
+        updateId = updateIdString.toInt() + 1
+    }
+}
+
+fun getUpdates(client: HttpClient, botToken: String, updateId: Int): String {
+    val urlGetUpdates = "$TELEGRAM_API_BASE$botToken/getUpdates?offset=$updateId"
+    val request: HttpRequest = HttpRequest.newBuilder().uri(URI.create(urlGetUpdates)).build()
+    val response = client.send(request, HttpResponse.BodyHandlers.ofString())
+    return response.body()
 }
