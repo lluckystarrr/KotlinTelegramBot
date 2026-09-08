@@ -18,10 +18,15 @@ fun main(args: Array<String>) {
         val updates: String = getUpdates(client, botToken, updateId)
         println(updates)
 
-        val startUpdateId = updates.lastIndexOf("update_id")
-        val endUpdateId = updates.lastIndexOf(",\n\"message\"")
+        val startUpdateId = updates.indexOf("update_id")
+        if (startUpdateId == -1) continue
 
-        if (startUpdateId == -1 || endUpdateId == -1) continue
+        var endUpdateId = startUpdateId + 11
+        while (endUpdateId < updates.length && updates[endUpdateId].isDigit()) {
+            endUpdateId++
+        }
+
+        if (endUpdateId == startUpdateId + 11) continue
 
         val updateIdString = updates.substring(startUpdateId + 11, endUpdateId)
         println(updateIdString)
