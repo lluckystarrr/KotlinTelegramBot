@@ -36,15 +36,9 @@ fun main(args: Array<String>) {
         println(updateIdString)
         updateId = updateIdString.toInt() + 1
 
-        var lastTextMatch: MatchResult? = null
-        startPos = 0
-        while (true) {
-            val match = messageTextRegex.find(updates, startPos) ?: break
-            lastTextMatch = match
-            startPos = match.range.last + 1
-        }
+        val textMatch = messageTextRegex.find(updates, lastUpdateMatch.range.first)
+        val text = textMatch?.groups?.get(1)?.value
 
-        val text = lastTextMatch?.groups?.get(1)?.value
         if (text != null) {
             println(text)
         }
