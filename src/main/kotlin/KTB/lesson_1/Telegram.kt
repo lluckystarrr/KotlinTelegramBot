@@ -25,13 +25,18 @@ fun main(args: Array<String>) {
         while (endUpdateId < updates.length && updates[endUpdateId].isDigit()) {
             endUpdateId++
         }
-
         if (endUpdateId == startUpdateId + 11) continue
 
         val updateIdString = updates.substring(startUpdateId + 11, endUpdateId)
         println(updateIdString)
 
         updateId = updateIdString.toInt() + 1
+
+        val messageTextRegex: Regex = "\"text\":\"(.+?)\"".toRegex()
+        val matchResult: MatchResult? = messageTextRegex.find(updates)
+        val groups = matchResult?.groups
+        val text = groups?.get(1)?.value
+        println(text)
     }
 }
 
