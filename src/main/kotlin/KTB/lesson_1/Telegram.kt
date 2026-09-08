@@ -22,20 +22,29 @@ fun main(args: Array<String>) {
         val updates = getUpdates(client, botToken, updateId)
         println(updates)
 
-        val lastUpdateStart = updates.lastIndexOf("\"update_id\"")
-        if (lastUpdateStart == -1) continue
+        var lastUpdateMatch: MatchResult? = null
+        var startPos = 0
+        while (true) {
+            val match = updateIdRegex.find(updates, startPos) ?: break
+            lastUpdateMatch = match
+            startPos = match.range.last + 1
+        }
 
-        val lastUpdate = updates.substring(lastUpdateStart)
+        if (lastUpdateMatch == null) continue
 
-        val updateIdMatch = updateIdRegex.find(lastUpdate) ?: continue
-        val updateIdString = updateIdMatch.groups[1]?.value ?: continue
-
+        val updateIdString = lastUpdateMatch.groups[1]?.value ?: continue
         println(updateIdString)
         updateId = updateIdString.toInt() + 1
 
-        val textMatch = messageTextRegex.find(lastUpdate)
-        val text = textMatch?.groups?.get(1)?.value
+        var lastTextMatch: MatchResult? = null
+        startPos = 0
+        while (true) {
+            val match = messageTextRegex.find(updates, startPos) ?: break
+            lastTextMatch = match
+            startPos = match.range.last + 1
+        }
 
+        val text = lastTextMatch?.groups?.get(1)?.value
         if (text != null) {
             println(text)
         }
