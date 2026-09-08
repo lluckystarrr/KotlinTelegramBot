@@ -19,19 +19,18 @@ fun main(args: Array<String>) {
         println(updates)
 
         val updateIdRegex = "\"update_id\":\\s*(\\d+)".toRegex()
-        val matchResult = updateIdRegex.find(updates)
-        if (matchResult == null) continue
+        val allMatches = updateIdRegex.findAll(updates)
+        val lastMatch = allMatches.lastOrNull()
+        if (lastMatch == null) continue
 
-        val updateIdString = matchResult.groupValues[1]
+        val updateIdString = lastMatch.groupValues[1]
         println(updateIdString)
 
         updateId = updateIdString.toInt() + 1
 
-        val messageTextRegex: Regex = "\"text\":\"(.+?)\"".toRegex()
+        val messageTextRegex = "\"text\":\"(.*?)\"".toRegex()
         val matchResultText = messageTextRegex.find(updates)
-        val groups = matchResultText?.groups
-        val text = groups?.get(1)?.value
-
+        val text = matchResultText?.groups?.get(1)?.value
         if (text != null) {
             println(text)
         }
