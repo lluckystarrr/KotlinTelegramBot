@@ -13,7 +13,9 @@ class TelegramBotService(
     private val client: HttpClient = HttpClient.newBuilder().build()
 
     fun getUpdates(updateId: Int): String {
-        val urlGetUpdates = "$TELEGRAM_API_BASE$botToken/getUpdates?offset=$updateId"
+        val urlGetUpdates =
+            "$TELEGRAM_API_BASE$botToken/getUpdates?offset=$updateId"
+
         val request = HttpRequest.newBuilder().uri(URI.create(urlGetUpdates)).build()
         val response = client.send(request, HttpResponse.BodyHandlers.ofString())
         return response.body()
