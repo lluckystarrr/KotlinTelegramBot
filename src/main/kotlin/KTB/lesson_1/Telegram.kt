@@ -13,31 +13,49 @@ fun main(args: Array<String>) {
 
     val client: HttpClient = HttpClient.newBuilder().build()
 
+    val updateIdRegex = "\"update_id\":\\s*(\\d+)".toRegex()
+    val messageTextRegex = "\"text\":\\s*\"(.*?)\"".toRegex()
+
     while (true) {
         Thread.sleep(2000)
-        val updates: String = getUpdates(client, botToken, updateId)
+
+        val updates = getUpdates(client, botToken, updateId)
         println(updates)
 
-        val startUpdateId = updates.indexOf("update_id")
-        if (startUpdateId == -1) continue
-
-        var endUpdateId = startUpdateId + 11
-        while (endUpdateId < updates.length && updates[endUpdateId].isDigit()) {
-            endUpdateId++
+        var lastUpdateMatch: MatchResult? = null
+        var startPos = 0
+        while (true) {
+            val match = updateIdRegex.find(updates, startPos) ?: break
+            lastUpdateMatch = match
+            startPos = match.range.last + 1
         }
 
-        if (endUpdateId == startUpdateId + 11) continue
+        if (lastUpdateMatch == null) continue
 
-        val updateIdString = updates.substring(startUpdateId + 11, endUpdateId)
+        val updateIdString = lastUpdateMatch.groups[1]?.value ?: continue
         println(updateIdString)
-
         updateId = updateIdString.toInt() + 1
+
+        val textMatch = messageTextRegex.find(updates, lastUpdateMatch.range.first)
+        val text = textMatch?.groups?.get(1)?.value
+
+        if (text != null) {
+            println(text)
+        }
     }
 }
 
 fun getUpdates(client: HttpClient, botToken: String, updateId: Int): String {
     val urlGetUpdates = "$TELEGRAM_API_BASE$botToken/getUpdates?offset=$updateId"
-    val request: HttpRequest = HttpRequest.newBuilder().uri(URI.create(urlGetUpdates)).build()
-    val response = client.send(request, HttpResponse.BodyHandlers.ofString())
+
+    val request = HttpRequest.newBuilder()
+        .uri(URI.create(urlGetUpdates))
+        .build()
+
+    val response = client.send(
+        request,
+        HttpResponse.BodyHandlers.ofString()
+    )
+
     return response.body()
 }
