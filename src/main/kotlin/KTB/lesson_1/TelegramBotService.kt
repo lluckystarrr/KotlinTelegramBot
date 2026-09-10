@@ -57,6 +57,13 @@ class TelegramBotService(private val botToken: String) {
         sendMessage(chatId, "Главное меню:", replyMarkup)
     }
 
+    fun sendQuestion(chatId: String, question: Question) {
+        val buttons = question.variants.mapIndexed { index, word -> """{"text": "${escapeJson(word.translate)}", "callback_data": "answer_$index"}""" }.joinToString(",")
+        val replyMarkup = """{"inline_keyboard": [[$buttons]]}"""
+
+        sendMessage(chatId, "Как переводится слово «${escapeJson(question.correctAnswer.original)}»?", replyMarkup)
+    }
+
     fun answerCallbackQuery(callbackQueryId: String) {
         val json = """
             {

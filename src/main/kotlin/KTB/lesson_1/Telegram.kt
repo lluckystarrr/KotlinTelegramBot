@@ -41,21 +41,30 @@ fun main(args: Array<String>) {
                 }
 
                 if (chatId != null && callbackData != null) {
-                    when (callbackData) {
-                        CALLBACK_LEARN_WORDS -> {
+                    when {
+                        callbackData == CALLBACK_LEARN_WORDS -> {
                             val question = trainer.getNextQuestion()
 
                             if (question == null) {
                                 telegramBotService.sendMessage(chatId = chatId, text = "Все слова уже выучены!")
                             } else {
-                                val variants = question.variants.mapIndexed { index, word -> "${index + 1}. ${word.translate}" }.joinToString("\n")
-                                telegramBotService.sendMessage(chatId = chatId, text = "Как переводится слово «${question.correctAnswer.original}»?\n\n$variants")
+                                telegramBotService.sendQuestion(chatId, question)
                             }
                         }
 
-                        CALLBACK_STATISTICS -> {
+                        callbackData == CALLBACK_STATISTICS -> {
                             val statistics = trainer.getStatistics()
                             telegramBotService.sendMessage(chatId = chatId, text = "Изучено слов: ${statistics.learned} из ${statistics.total} (${statistics.percent}%)")
+                        }
+
+                        callbackData.startsWith("answer_") -> {
+                            val answerIndex = callbackData.removePrefix("answer_").toIntOrNull()
+
+                            if (answerIndex != null) {
+                                val isCorrect = trainer.checkAnswer(answerIndex)
+                                val resultText = if (isCorrect) "Правильно! 🎉" else "Неправильно 😔"
+                                telegramBotService.sendMessage(chatId = chatId, text = resultText)
+                            }
                         }
                     }
                 }
