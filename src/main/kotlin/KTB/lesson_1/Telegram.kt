@@ -21,19 +21,16 @@ fun main(args: Array<String>) {
 
         while (true) {
             val updateMatch = updateIdRegex.find(updates, startPos) ?: break
-            val updateIdString = updateMatch.groups[1]?.value ?: break
+            val updateIdString = updateMatch.groups?.get(1)?.value ?: break
             updateId = updateIdString.toInt() + 1
 
             val nextUpdateMatch = updateIdRegex.find(updates, updateMatch.range.last + 1)
-
             val endPos = nextUpdateMatch?.range?.first ?: updates.length
-
             val update = updates.substring(updateMatch.range.first, endPos)
-
             val callbackDataMatch = callbackDataRegex.find(update)
 
             if (callbackDataMatch != null) {
-                val callbackData = callbackDataMatch.groups[1]?.value?.let(::unescapeJson)
+                val callbackData = callbackDataMatch.groups?.get(1)?.value?.let(::unescapeJson)
                 val callbackQueryId = callbackQueryIdRegex.find(update)?.groups?.get(1)?.value?.let(::unescapeJson)
                 val chatId = chatIdRegex.find(update)?.groups?.get(1)?.value
 
@@ -44,46 +41,21 @@ fun main(args: Array<String>) {
                 }
 
                 if (chatId != null && callbackData != null) {
-
                     when (callbackData) {
-                        "learn_words" -> {
-                            val question =
-                                trainer.getNextQuestion()
+                        CALLBACK_LEARN_WORDS -> {
+                            val question = trainer.getNextQuestion()
 
                             if (question == null) {
-                                telegramBotService.sendMessage(
-                                    chatId = chatId,
-                                    text = "Все слова уже выучены!"
-                                )
-
+                                telegramBotService.sendMessage(chatId = chatId, text = "Все слова уже выучены!")
                             } else {
-                                val variants = question.variants.mapIndexed { index, word ->
-                                    "${index + 1}. ${word.translate}"
-                                }
-                                    .joinToString("\n")
-
-                                telegramBotService.sendMessage(
-                                    chatId = chatId,
-                                    text =
-                                        "Как переводится слово " +
-                                                "«${question.correctAnswer.original}»?\n\n" +
-                                                variants
-                                )
+                                val variants = question.variants.mapIndexed { index, word -> "${index + 1}. ${word.translate}" }.joinToString("\n")
+                                telegramBotService.sendMessage(chatId = chatId, text = "Как переводится слово «${question.correctAnswer.original}»?\n\n$variants")
                             }
                         }
 
-                        "statistics" -> {
-                            val statistics =
-                                trainer.getStatistics()
-
-                            telegramBotService.sendMessage(
-                                chatId = chatId,
-                                text =
-                                    "Изучено слов: " +
-                                            "${statistics.learned} из " +
-                                            "${statistics.total} " +
-                                            "(${statistics.percent}%)"
-                            )
+                        CALLBACK_STATISTICS -> {
+                            val statistics = trainer.getStatistics()
+                            telegramBotService.sendMessage(chatId = chatId, text = "Изучено слов: ${statistics.learned} из ${statistics.total} (${statistics.percent}%)")
                         }
                     }
                 }
@@ -93,9 +65,7 @@ fun main(args: Array<String>) {
             }
 
             val textMatch = messageTextRegex.find(update)
-
             val text = textMatch?.groups?.get(1)?.value?.let(::unescapeJson)
-
             val chatId = chatIdRegex.find(update)?.groups?.get(1)?.value
 
             if (text != null) {
@@ -107,19 +77,13 @@ fun main(args: Array<String>) {
             }
 
             if (text != null && chatId != null) {
-
                 when (text) {
                     "/start" -> {
-                        telegramBotService.sendMenu(
-                            chatId = chatId
-                        )
+                        telegramBotService.sendMenu(chatId = chatId)
                     }
 
                     else -> {
-                        telegramBotService.sendMessage(
-                            chatId = chatId,
-                            text = text
-                        )
+                        telegramBotService.sendMessage(chatId = chatId, text = text)
                     }
                 }
             }
@@ -130,10 +94,5 @@ fun main(args: Array<String>) {
 }
 
 private fun unescapeJson(value: String): String {
-    return value
-        .replace("\\\"", "\"")
-        .replace("\\\\", "\\")
-        .replace("\\n", "\n")
-        .replace("\\r", "\r")
-        .replace("\\t", "\t")
+    return value.replace("\\\"", "\"").replace("\\\\", "\\").replace("\\n", "\n").replace("\\r", "\r").replace("\\t", "\t")
 }
