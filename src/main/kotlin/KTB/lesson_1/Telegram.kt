@@ -57,8 +57,8 @@ fun main(args: Array<String>) {
                             telegramBotService.sendMessage(chatId = chatId, text = "Изучено слов: ${statistics.learned} из ${statistics.total} (${statistics.percent}%)")
                         }
 
-                        callbackData.startsWith("answer_") -> {
-                            val answerIndex = callbackData.removePrefix("answer_").toIntOrNull()
+                        callbackData.startsWith(ANSWER_PREFIX) -> {
+                            val answerIndex = callbackData.removePrefix(ANSWER_PREFIX).toIntOrNull()
 
                             if (answerIndex != null) {
                                 val isCorrect = trainer.checkAnswer(answerIndex)
