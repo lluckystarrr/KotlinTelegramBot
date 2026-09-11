@@ -65,7 +65,7 @@ fun main(args: Array<String>) {
 
                             if (answerIndex != null) {
                                 val isCorrect = trainer.checkAnswer(answerIndex)
-                                val resultText = if (isCorrect) "Правильно! 🎉" else "Неправильно 😔"
+                                val resultText = if (isCorrect) "Правильно!" else "Неправильно"
                                 telegramBotService.sendMessage(chatId = chatId, text = resultText)
 
                                 val nextQuestion = trainer.getNextQuestion()
