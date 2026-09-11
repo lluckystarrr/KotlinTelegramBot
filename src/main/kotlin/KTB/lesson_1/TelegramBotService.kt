@@ -5,9 +5,9 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 
-const val CALLBACK_LEARN_WORDS = "learn_words"
-const val CALLBACK_STATISTICS = "statistics"
-const val ANSWER_PREFIX = "answer_"
+const val CALLBACK_LEARN_WORDS = "learn_words_clicked"
+const val CALLBACK_STATISTICS = "statistics_clicked"
+const val CALLBACK_DATA_ANSWER_PREFIX = "answer_"
 
 class TelegramBotService(private val botToken: String) {
 
@@ -59,7 +59,7 @@ class TelegramBotService(private val botToken: String) {
     }
 
     fun sendQuestion(chatId: String, question: Question) {
-        val buttons = question.variants.mapIndexed { index, word -> """{"text": "${escapeJson(word.translate)}", "callback_data": "$ANSWER_PREFIX$index"}""" }.joinToString(",")
+        val buttons = question.variants.mapIndexed { index, word -> """{"text": "${escapeJson(word.translate)}", "callback_data": "$CALLBACK_DATA_ANSWER_PREFIX$index"}""" }.joinToString(",")
         val replyMarkup = """{"inline_keyboard": [[$buttons]]}"""
 
         sendMessage(chatId, "Как переводится слово «${question.correctAnswer.original}»?", replyMarkup)

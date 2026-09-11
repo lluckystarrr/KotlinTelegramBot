@@ -91,8 +91,7 @@ fun main() {
                 val statistics = trainer.getStatistics()
 
                 println(
-                    "Выучено ${statistics.learned} из ${statistics.total} слов | " +
-                            "${statistics.percent}%"
+                    "Выучено ${statistics.learnedCount} из ${statistics.totalCount} слов"
                 )
             }
 
