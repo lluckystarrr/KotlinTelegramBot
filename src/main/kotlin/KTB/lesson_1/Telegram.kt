@@ -5,14 +5,14 @@ const val TELEGRAM_API_BASE = "https://api.telegram.org/bot"
 fun checkNextQuestionAndSend(
     trainer: LearnWordsTrainer,
     telegramBotService: TelegramBotService,
-    chatId: Int
+    chatId: String
 ) {
     val question = trainer.getNextQuestion()
 
     if (question == null) {
-        telegramBotService.sendMessage(chatId = chatId.toString(), text = "Все слова в словаре выучены")
+        telegramBotService.sendMessage(chatId = chatId, text = "Все слова в словаре выучены")
     } else {
-        telegramBotService.sendQuestion(chatId.toString(), question)
+        telegramBotService.sendQuestion(chatId, question)
     }
 }
 
@@ -57,7 +57,7 @@ fun main(args: Array<String>) {
                 if (chatId != null && callbackData != null) {
                     when {
                         callbackData == CALLBACK_LEARN_WORDS -> {
-                            checkNextQuestionAndSend(trainer, telegramBotService, chatId.toInt())
+                            checkNextQuestionAndSend(trainer, telegramBotService, chatId)
                         }
 
                         callbackData == CALLBACK_STATISTICS -> {
@@ -69,14 +69,22 @@ fun main(args: Array<String>) {
                         }
 
                         callbackData.startsWith(CALLBACK_DATA_ANSWER_PREFIX) -> {
-                            val answerIndex = callbackData.removePrefix(CALLBACK_DATA_ANSWER_PREFIX).toIntOrNull()
+                            val userAnswerIndex = callbackData.substringAfter(CALLBACK_DATA_ANSWER_PREFIX).toInt()
 
-                            if (answerIndex != null) {
-                                val isCorrect = trainer.checkAnswer(answerIndex)
-                                val resultText = if (isCorrect) "Правильно!" else "Неправильно!"
-                                telegramBotService.sendMessage(chatId = chatId, text = resultText)
-                                checkNextQuestionAndSend(trainer, telegramBotService, chatId.toInt())
+                            val question = trainer.getCurrentQuestion()
+                            val isCorrect = trainer.checkAnswer(userAnswerIndex)
+
+                            if (isCorrect) {
+                                telegramBotService.sendMessage(chatId = chatId, text = "Правильно!")
+                            } else {
+                                val correctAnswer = question?.correctAnswer
+                                telegramBotService.sendMessage(
+                                    chatId = chatId,
+                                    text = "Неправильно! ${correctAnswer?.original} – это ${correctAnswer?.translate}"
+                                )
                             }
+
+                            checkNextQuestionAndSend(trainer, telegramBotService, chatId)
                         }
                     }
                 }
