@@ -2,6 +2,20 @@ package org.example.KTB.lesson_1
 
 const val TELEGRAM_API_BASE = "https://api.telegram.org/bot"
 
+fun checkNextQuestionAndSend(
+    trainer: LearnWordsTrainer,
+    telegramBotService: TelegramBotService,
+    chatId: Int
+) {
+    val question = trainer.getNextQuestion()
+
+    if (question == null) {
+        telegramBotService.sendMessage(chatId = chatId.toString(), text = "Все слова в словаре выучены")
+    } else {
+        telegramBotService.sendQuestion(chatId.toString(), question)
+    }
+}
+
 fun main(args: Array<String>) {
     val botToken = args[0]
     var updateId = 0
@@ -43,38 +57,25 @@ fun main(args: Array<String>) {
                 if (chatId != null && callbackData != null) {
                     when {
                         callbackData == CALLBACK_LEARN_WORDS -> {
-                            val question = trainer.getNextQuestion()
-
-                            if (question == null) {
-                                telegramBotService.sendMessage(chatId = chatId, text = "Все слова уже выучены!")
-                            } else {
-                                telegramBotService.sendQuestion(chatId, question)
-                            }
+                            checkNextQuestionAndSend(trainer, telegramBotService, chatId.toInt())
                         }
 
                         callbackData == CALLBACK_STATISTICS -> {
                             val statistics = trainer.getStatistics()
                             telegramBotService.sendMessage(
                                 chatId = chatId,
-                                text = "Изучено слов: ${statistics.learned} из ${statistics.total} (${statistics.percent}%)"
+                                text = "Изучено слов: ${statistics.learnedCount} из ${statistics.totalCount}"
                             )
                         }
 
-                        callbackData.startsWith(ANSWER_PREFIX) -> {
-                            val answerIndex = callbackData.removePrefix(ANSWER_PREFIX).toIntOrNull()
+                        callbackData.startsWith(CALLBACK_DATA_ANSWER_PREFIX) -> {
+                            val answerIndex = callbackData.removePrefix(CALLBACK_DATA_ANSWER_PREFIX).toIntOrNull()
 
                             if (answerIndex != null) {
                                 val isCorrect = trainer.checkAnswer(answerIndex)
                                 val resultText = if (isCorrect) "Правильно!" else "Неправильно!"
                                 telegramBotService.sendMessage(chatId = chatId, text = resultText)
-
-                                val nextQuestion = trainer.getNextQuestion()
-
-                                if (nextQuestion == null) {
-                                    telegramBotService.sendMessage(chatId = chatId, text = "Все слова уже выучены!")
-                                } else {
-                                    telegramBotService.sendQuestion(chatId, nextQuestion)
-                                }
+                                checkNextQuestionAndSend(trainer, telegramBotService, chatId.toInt())
                             }
                         }
                     }

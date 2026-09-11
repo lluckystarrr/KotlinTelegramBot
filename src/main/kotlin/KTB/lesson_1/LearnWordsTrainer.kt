@@ -13,9 +13,8 @@ data class Word(
 }
 
 data class Statistics(
-    val learned: Int,
-    val total: Int,
-    val percent: Int
+    val totalCount: Int,
+    val learnedCount: Int
 )
 
 data class Question(
@@ -31,20 +30,14 @@ class LearnWordsTrainer(
     private val dictionary = loadDictionary()
 
     fun getStatistics(): Statistics {
-        val learned = dictionary.count {
+        val learnedCount = dictionary.count {
             it.isLearned(answersCountToLearn)
         }
-        val total = dictionary.size
-        val percent = if (total > 0) {
-            learned * 100 / total
-        } else {
-            0
-        }
+        val totalCount = dictionary.size
 
         return Statistics(
-            learned = learned,
-            total = total,
-            percent = percent
+            totalCount = totalCount,
+            learnedCount = learnedCount
         )
     }
 
