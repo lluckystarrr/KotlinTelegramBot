@@ -54,7 +54,10 @@ fun main(args: Array<String>) {
 
                         callbackData == CALLBACK_STATISTICS -> {
                             val statistics = trainer.getStatistics()
-                            telegramBotService.sendMessage(chatId = chatId, text = "Изучено слов: ${statistics.learned} из ${statistics.total} (${statistics.percent}%)")
+                            telegramBotService.sendMessage(
+                                chatId = chatId,
+                                text = "Изучено слов: ${statistics.learned} из ${statistics.total} (${statistics.percent}%)"
+                            )
                         }
 
                         callbackData.startsWith(ANSWER_PREFIX) -> {
@@ -64,6 +67,14 @@ fun main(args: Array<String>) {
                                 val isCorrect = trainer.checkAnswer(answerIndex)
                                 val resultText = if (isCorrect) "Правильно! 🎉" else "Неправильно 😔"
                                 telegramBotService.sendMessage(chatId = chatId, text = resultText)
+
+                                val nextQuestion = trainer.getNextQuestion()
+
+                                if (nextQuestion == null) {
+                                    telegramBotService.sendMessage(chatId = chatId, text = "Все слова уже выучены!")
+                                } else {
+                                    telegramBotService.sendQuestion(chatId, nextQuestion)
+                                }
                             }
                         }
                     }
