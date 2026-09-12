@@ -1,6 +1,41 @@
 package org.example.KTB.lesson_1
 
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
+
 const val TELEGRAM_API_BASE = "https://api.telegram.org/bot"
+
+@Serializable
+data class TelegramResponse(
+    val ok: Boolean,
+    val result: List<TelegramUpdate>
+)
+
+@Serializable
+data class TelegramUpdate(
+    val update_id: Int,
+    val message: TelegramMessage? = null,
+    val callback_query: TelegramCallbackQuery? = null
+)
+
+@Serializable
+data class TelegramMessage(
+    val message_id: Int? = null,
+    val chat: TelegramChat,
+    val text: String? = null
+)
+
+@Serializable
+data class TelegramChat(
+    val id: Long
+)
+
+@Serializable
+data class TelegramCallbackQuery(
+    val id: String,
+    val data: String? = null,
+    val message: TelegramMessage? = null
+)
 
 fun checkNextQuestionAndSend(
     trainer: LearnWordsTrainer,
@@ -21,38 +56,30 @@ fun main(args: Array<String>) {
     var updateId = 0
     val telegramBotService = TelegramBotService(botToken)
     val trainer = LearnWordsTrainer()
-    val updateIdRegex = "\"update_id\"\\s*:\\s*(\\d+)".toRegex()
-    val messageTextRegex = "\"text\"\\s*:\\s*\"((?:[^\"\\\\]|\\\\.)*)\"".toRegex()
-    val chatIdRegex = "\"chat\"\\s*:\\s*\\{[^}]*\"id\"\\s*:\\s*(-?\\d+)".toRegex()
-    val callbackQueryIdRegex = "\"callback_query\"\\s*:\\s*\\{.*?\"id\"\\s*:\\s*\"((?:[^\"\\\\]|\\\\.)*)\"".toRegex()
-    val callbackDataRegex = "\"callback_query\"\\s*:\\s*\\{.*?\"data\"\\s*:\\s*\"((?:[^\"\\\\]|\\\\.)*)\"".toRegex()
+    val json = Json {
+        ignoreUnknownKeys = true
+    }
 
     while (true) {
         Thread.sleep(2000)
-        val updates = telegramBotService.getUpdates(updateId)
-        println(updates)
-        var startPos = 0
 
-        while (true) {
-            val updateMatch = updateIdRegex.find(updates, startPos) ?: break
-            val updateIdString = updateMatch.groups?.get(1)?.value ?: break
-            updateId = updateIdString.toInt() + 1
+        val updatesJson = telegramBotService.getUpdates(updateId)
+        println(updatesJson)
 
-            val nextUpdateMatch = updateIdRegex.find(updates, updateMatch.range.last + 1)
-            val endPos = nextUpdateMatch?.range?.first ?: updates.length
-            val update = updates.substring(updateMatch.range.first, endPos)
-            val callbackDataMatch = callbackDataRegex.find(update)
+        val updates = json.decodeFromString<TelegramResponse>(updatesJson)
 
-            if (callbackDataMatch != null) {
-                val callbackData = callbackDataMatch.groups?.get(1)?.value?.let(::unescapeJson)
-                val callbackQueryId = callbackQueryIdRegex.find(update)?.groups?.get(1)?.value?.let(::unescapeJson)
-                val chatId = chatIdRegex.find(update)?.groups?.get(1)?.value
+        for (update in updates.result) {
+            updateId = update.update_id + 1
+
+            val callbackQuery = update.callback_query
+
+            if (callbackQuery != null) {
+                val callbackData = callbackQuery.data
+                val chatId = callbackQuery.message?.chat?.id?.toString()
 
                 println("callback_data = $callbackData")
 
-                if (callbackQueryId != null) {
-                    telegramBotService.answerCallbackQuery(callbackQueryId)
-                }
+                telegramBotService.answerCallbackQuery(callbackQuery.id)
 
                 if (chatId != null && callbackData != null) {
                     when {
@@ -62,6 +89,7 @@ fun main(args: Array<String>) {
 
                         callbackData == CALLBACK_STATISTICS -> {
                             val statistics = trainer.getStatistics()
+
                             telegramBotService.sendMessage(
                                 chatId = chatId,
                                 text = "Изучено слов: ${statistics.learnedCount} из ${statistics.totalCount}"
@@ -75,9 +103,13 @@ fun main(args: Array<String>) {
                             val isCorrect = trainer.checkAnswer(userAnswerIndex)
 
                             if (isCorrect) {
-                                telegramBotService.sendMessage(chatId = chatId, text = "Правильно!")
+                                telegramBotService.sendMessage(
+                                    chatId = chatId,
+                                    text = "Правильно!"
+                                )
                             } else {
                                 val correctAnswer = question?.correctAnswer
+
                                 telegramBotService.sendMessage(
                                     chatId = chatId,
                                     text = "Неправильно! ${correctAnswer?.original} – это ${correctAnswer?.translate}"
@@ -89,39 +121,33 @@ fun main(args: Array<String>) {
                     }
                 }
 
-                startPos = updateMatch.range.last + 1
                 continue
             }
 
-            val textMatch = messageTextRegex.find(update)
-            val text = textMatch?.groups?.get(1)?.value?.let(::unescapeJson)
-            val chatId = chatIdRegex.find(update)?.groups?.get(1)?.value
+            val message = update.message
 
-            if (text != null) {
-                println(text)
-            }
+            if (message != null) {
+                val text = message.text
+                val chatId = message.chat.id.toString()
 
-            if (chatId != null) {
+                if (text != null) {
+                    println(text)
+                }
+
                 println(chatId)
-            }
 
-            if (text != null && chatId != null) {
                 when (text) {
                     "/start" -> {
-                        telegramBotService.sendMenu(chatId = chatId)
+                        telegramBotService.sendMenu(chatId)
                     }
 
                     else -> {
-                        telegramBotService.sendMessage(chatId = chatId, text = text)
+                        if (text != null) {
+                            telegramBotService.sendMessage(chatId, text)
+                        }
                     }
                 }
             }
-
-            startPos = updateMatch.range.last + 1
         }
     }
-}
-
-private fun unescapeJson(value: String): String {
-    return value.replace("\\\"", "\"").replace("\\\\", "\\").replace("\\n", "\n").replace("\\r", "\r").replace("\\t", "\t")
 }
