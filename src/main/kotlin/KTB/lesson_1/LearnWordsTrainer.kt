@@ -41,6 +41,14 @@ class LearnWordsTrainer(
         )
     }
 
+    fun resetStatistics() {
+        dictionary.forEach {
+            it.correctAnswersCount = 0
+        }
+
+        saveDictionary(dictionary)
+    }
+
     fun getNextQuestion(): Question? {
         val notLearnedWords = dictionary.filterNot {
             it.isLearned(answersCountToLearn)

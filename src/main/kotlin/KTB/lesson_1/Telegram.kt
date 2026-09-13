@@ -49,25 +49,37 @@ fun checkNextQuestionAndSend(
     val question = trainer.getNextQuestion()
 
     if (question == null) {
-        telegramBotService.sendMessage(chatId = chatId, text = "Все слова в словаре выучены")
+        telegramBotService.sendMessage(
+            chatId = chatId,
+            text = "Все слова в словаре выучены"
+        )
     } else {
         telegramBotService.sendQuestion(chatId, question)
     }
 }
 
 fun main(args: Array<String>) {
+
     val botToken = args[0]
+
     var updateId = 0
+
     val telegramBotService = TelegramBotService(botToken)
-    val trainer = LearnWordsTrainer()
+
+    // Для каждого пользователя будет свой LearnWordsTrainer.
+    // Ключ - chatId пользователя.
+    val trainers = HashMap<Long, LearnWordsTrainer>()
+
     val json = Json {
         ignoreUnknownKeys = true
     }
 
     while (true) {
+
         Thread.sleep(2000)
 
         val updatesJson = telegramBotService.getUpdates(updateId)
+
         println(updatesJson)
 
         val updates = try {
@@ -78,54 +90,101 @@ fun main(args: Array<String>) {
         }
 
         for (update in updates.result) {
+
             updateId = update.updateId + 1
 
             val callbackQuery = update.callbackQuery
 
             if (callbackQuery != null) {
+
                 val callbackData = callbackQuery.data
-                val chatId = callbackQuery.message?.chat?.id?.toString()
+
+                val chatId = callbackQuery.message?.chat?.id
 
                 println("callback_data = $callbackData")
 
                 telegramBotService.answerCallbackQuery(callbackQuery.id)
 
                 if (chatId != null && callbackData != null) {
+
+                    // Получаем тренер именно этого пользователя.
+                    val trainer = trainers.getOrPut(chatId) {
+                        LearnWordsTrainer()
+                    }
+
                     when {
+
                         callbackData == CALLBACK_LEARN_WORDS -> {
-                            checkNextQuestionAndSend(trainer, telegramBotService, chatId)
+
+                            checkNextQuestionAndSend(
+                                trainer,
+                                telegramBotService,
+                                chatId.toString()
+                            )
                         }
 
                         callbackData == CALLBACK_STATISTICS -> {
+
                             val statistics = trainer.getStatistics()
 
                             telegramBotService.sendMessage(
-                                chatId = chatId,
-                                text = "Изучено слов: ${statistics.learnedCount} из ${statistics.totalCount}"
+                                chatId = chatId.toString(),
+                                text = "Изучено слов: " +
+                                        "${statistics.learnedCount} из " +
+                                        "${statistics.totalCount}"
+                            )
+                        }
+
+                        callbackData == CALLBACK_RESET_STATISTICS -> {
+
+                            trainer.resetStatistics()
+
+                            telegramBotService.sendMessage(
+                                chatId = chatId.toString(),
+                                text = "Статистика сброшена!"
                             )
                         }
 
                         callbackData.startsWith(CALLBACK_DATA_ANSWER_PREFIX) -> {
-                            val userAnswerIndex = callbackData.substringAfter(CALLBACK_DATA_ANSWER_PREFIX).toInt()
+
+                            val userAnswerIndex =
+                                callbackData
+                                    .substringAfter(
+                                        CALLBACK_DATA_ANSWER_PREFIX
+                                    )
+                                    .toInt()
 
                             val question = trainer.getCurrentQuestion()
-                            val isCorrect = trainer.checkAnswer(userAnswerIndex)
+
+                            val isCorrect =
+                                trainer.checkAnswer(userAnswerIndex)
 
                             if (isCorrect) {
-                                telegramBotService.sendMessage(
-                                    chatId = chatId,
-                                    text = "Правильно!"
-                                )
-                            } else {
-                                val correctAnswer = question?.correctAnswer
 
                                 telegramBotService.sendMessage(
-                                    chatId = chatId,
-                                    text = "Неправильно! ${correctAnswer?.original} – это ${correctAnswer?.translate}"
+                                    chatId = chatId.toString(),
+                                    text = "Правильно!"
+                                )
+
+                            } else {
+
+                                val correctAnswer =
+                                    question?.correctAnswer
+
+                                telegramBotService.sendMessage(
+                                    chatId = chatId.toString(),
+                                    text =
+                                        "Неправильно! " +
+                                                "${correctAnswer?.original} – это " +
+                                                "${correctAnswer?.translate}"
                                 )
                             }
 
-                            checkNextQuestionAndSend(trainer, telegramBotService, chatId)
+                            checkNextQuestionAndSend(
+                                trainer,
+                                telegramBotService,
+                                chatId.toString()
+                            )
                         }
                     }
                 }
@@ -136,8 +195,10 @@ fun main(args: Array<String>) {
             val message = update.message
 
             if (message != null) {
+
                 val text = message.text
-                val chatId = message.chat.id.toString()
+
+                val chatId = message.chat.id
 
                 if (text != null) {
                     println(text)
@@ -146,13 +207,28 @@ fun main(args: Array<String>) {
                 println(chatId)
 
                 when (text) {
+
                     "/start" -> {
-                        telegramBotService.sendMenu(chatId)
+
+                        // Создаём тренер для пользователя,
+                        // если его ещё нет.
+                        trainers.getOrPut(chatId) {
+                            LearnWordsTrainer()
+                        }
+
+                        telegramBotService.sendMenu(
+                            chatId.toString()
+                        )
                     }
 
                     else -> {
+
                         if (text != null) {
-                            telegramBotService.sendMessage(chatId, text)
+
+                            telegramBotService.sendMessage(
+                                chatId.toString(),
+                                text
+                            )
                         }
                     }
                 }

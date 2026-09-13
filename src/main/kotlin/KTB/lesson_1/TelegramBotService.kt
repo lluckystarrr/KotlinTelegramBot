@@ -10,7 +10,11 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 
 const val CALLBACK_LEARN_WORDS = "learn_words_clicked"
+
 const val CALLBACK_STATISTICS = "statistics_clicked"
+
+const val CALLBACK_RESET_STATISTICS = "reset_statistics_clicked"
+
 const val CALLBACK_DATA_ANSWER_PREFIX = "answer_"
 
 @Serializable
@@ -44,23 +48,40 @@ data class AnswerCallbackQueryRequest(
 class TelegramBotService(private val botToken: String) {
 
     private val client = OkHttpClient()
+
     private val json = Json
 
     fun getUpdates(updateId: Int): String {
-        val url = "${TELEGRAM_API_BASE}${botToken}/getUpdates?offset=$updateId"
-        val request = Request.Builder().url(url).build()
+
+        val url =
+            "${TELEGRAM_API_BASE}${botToken}/getUpdates?offset=$updateId"
+
+        val request = Request.Builder()
+            .url(url)
+            .build()
 
         return try {
+
             client.newCall(request).execute().use { response ->
                 response.body?.string() ?: ""
             }
+
         } catch (e: Exception) {
-            println("Ошибка при получении обновлений: ${e.message}")
+
+            println(
+                "Ошибка при получении обновлений: ${e.message}"
+            )
+
             ""
         }
     }
 
-    fun sendMessage(chatId: String, text: String, replyMarkup: InlineKeyboardMarkup? = null) {
+    fun sendMessage(
+        chatId: String,
+        text: String,
+        replyMarkup: InlineKeyboardMarkup? = null
+    ) {
+
         val requestBody = SendMessageRequest(
             chatId = chatId,
             text = text,
@@ -69,35 +90,59 @@ class TelegramBotService(private val botToken: String) {
 
         val jsonString = json.encodeToString(requestBody)
 
-        sendPostRequest("sendMessage", jsonString)
+        sendPostRequest(
+            "sendMessage",
+            jsonString
+        )
     }
 
     fun sendMenu(chatId: String) {
+
         val replyMarkup = InlineKeyboardMarkup(
+
             inlineKeyboard = listOf(
+
                 listOf(
                     InlineKeyboardButton(
                         text = "Учить слова",
                         callbackData = CALLBACK_LEARN_WORDS
                     )
                 ),
+
                 listOf(
                     InlineKeyboardButton(
                         text = "Статистика",
                         callbackData = CALLBACK_STATISTICS
                     )
+                ),
+
+                listOf(
+                    InlineKeyboardButton(
+                        text = "Сбросить статистику",
+                        callbackData = CALLBACK_RESET_STATISTICS
+                    )
                 )
             )
         )
 
-        sendMessage(chatId, "Главное меню:", replyMarkup)
+        sendMessage(
+            chatId,
+            "Главное меню:",
+            replyMarkup
+        )
     }
 
-    fun sendQuestion(chatId: String, question: Question) {
+    fun sendQuestion(
+        chatId: String,
+        question: Question
+    ) {
+
         val buttons = question.variants.mapIndexed { index, word ->
+
             InlineKeyboardButton(
                 text = word.translate,
-                callbackData = "$CALLBACK_DATA_ANSWER_PREFIX$index"
+                callbackData =
+                    "$CALLBACK_DATA_ANSWER_PREFIX$index"
             )
         }
 
@@ -112,28 +157,56 @@ class TelegramBotService(private val botToken: String) {
         )
     }
 
-    fun answerCallbackQuery(callbackQueryId: String) {
+    fun answerCallbackQuery(
+        callbackQueryId: String
+    ) {
+
         val requestBody = AnswerCallbackQueryRequest(
             callbackQueryId = callbackQueryId
         )
 
-        val jsonString = json.encodeToString(requestBody)
+        val jsonString =
+            json.encodeToString(requestBody)
 
-        sendPostRequest("answerCallbackQuery", jsonString)
+        sendPostRequest(
+            "answerCallbackQuery",
+            jsonString
+        )
     }
 
-    private fun sendPostRequest(method: String, json: String) {
-        val url = "${TELEGRAM_API_BASE}${botToken}/$method"
-        val mediaType = "application/json; charset=utf-8".toMediaType()
-        val body = json.toRequestBody(mediaType)
-        val request = Request.Builder().url(url).post(body).build()
+    private fun sendPostRequest(
+        method: String,
+        json: String
+    ) {
+
+        val url =
+            "${TELEGRAM_API_BASE}${botToken}/$method"
+
+        val mediaType =
+            "application/json; charset=utf-8".toMediaType()
+
+        val body =
+            json.toRequestBody(mediaType)
+
+        val request = Request.Builder()
+            .url(url)
+            .post(body)
+            .build()
 
         try {
+
             client.newCall(request).execute().use { response ->
-                println(response.body?.string())
+
+                println(
+                    response.body?.string()
+                )
             }
+
         } catch (e: Exception) {
-            println("Ошибка при отправке запроса: ${e.message}")
+
+            println(
+                "Ошибка при отправке запроса: ${e.message}"
+            )
         }
     }
 }
