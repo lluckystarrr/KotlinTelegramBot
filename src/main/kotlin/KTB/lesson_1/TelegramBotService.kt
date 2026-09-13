@@ -1,5 +1,6 @@
 package org.example.KTB.lesson_1
 
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -14,25 +15,30 @@ const val CALLBACK_DATA_ANSWER_PREFIX = "answer_"
 
 @Serializable
 data class SendMessageRequest(
-    val chat_id: String,
+    @SerialName("chat_id")
+    val chatId: String,
     val text: String,
-    val reply_markup: InlineKeyboardMarkup? = null
+    @SerialName("reply_markup")
+    val replyMarkup: InlineKeyboardMarkup? = null
 )
 
 @Serializable
 data class InlineKeyboardMarkup(
-    val inline_keyboard: List<List<InlineKeyboardButton>>
+    @SerialName("inline_keyboard")
+    val inlineKeyboard: List<List<InlineKeyboardButton>>
 )
 
 @Serializable
 data class InlineKeyboardButton(
     val text: String,
-    val callback_data: String
+    @SerialName("callback_data")
+    val callbackData: String
 )
 
 @Serializable
 data class AnswerCallbackQueryRequest(
-    val callback_query_id: String
+    @SerialName("callback_query_id")
+    val callbackQueryId: String
 )
 
 class TelegramBotService(private val botToken: String) {
@@ -44,16 +50,21 @@ class TelegramBotService(private val botToken: String) {
         val url = "${TELEGRAM_API_BASE}${botToken}/getUpdates?offset=$updateId"
         val request = Request.Builder().url(url).build()
 
-        client.newCall(request).execute().use { response ->
-            return response.body?.string() ?: ""
+        return try {
+            client.newCall(request).execute().use { response ->
+                response.body?.string() ?: ""
+            }
+        } catch (e: Exception) {
+            println("Ошибка при получении обновлений: ${e.message}")
+            ""
         }
     }
 
     fun sendMessage(chatId: String, text: String, replyMarkup: InlineKeyboardMarkup? = null) {
         val requestBody = SendMessageRequest(
-            chat_id = chatId,
+            chatId = chatId,
             text = text,
-            reply_markup = replyMarkup
+            replyMarkup = replyMarkup
         )
 
         val jsonString = json.encodeToString(requestBody)
@@ -63,17 +74,17 @@ class TelegramBotService(private val botToken: String) {
 
     fun sendMenu(chatId: String) {
         val replyMarkup = InlineKeyboardMarkup(
-            inline_keyboard = listOf(
+            inlineKeyboard = listOf(
                 listOf(
                     InlineKeyboardButton(
                         text = "Учить слова",
-                        callback_data = CALLBACK_LEARN_WORDS
+                        callbackData = CALLBACK_LEARN_WORDS
                     )
                 ),
                 listOf(
                     InlineKeyboardButton(
                         text = "Статистика",
-                        callback_data = CALLBACK_STATISTICS
+                        callbackData = CALLBACK_STATISTICS
                     )
                 )
             )
@@ -86,12 +97,12 @@ class TelegramBotService(private val botToken: String) {
         val buttons = question.variants.mapIndexed { index, word ->
             InlineKeyboardButton(
                 text = word.translate,
-                callback_data = "$CALLBACK_DATA_ANSWER_PREFIX$index"
+                callbackData = "$CALLBACK_DATA_ANSWER_PREFIX$index"
             )
         }
 
         val replyMarkup = InlineKeyboardMarkup(
-            inline_keyboard = listOf(buttons)
+            inlineKeyboard = listOf(buttons)
         )
 
         sendMessage(
@@ -103,7 +114,7 @@ class TelegramBotService(private val botToken: String) {
 
     fun answerCallbackQuery(callbackQueryId: String) {
         val requestBody = AnswerCallbackQueryRequest(
-            callback_query_id = callbackQueryId
+            callbackQueryId = callbackQueryId
         )
 
         val jsonString = json.encodeToString(requestBody)
@@ -117,8 +128,12 @@ class TelegramBotService(private val botToken: String) {
         val body = json.toRequestBody(mediaType)
         val request = Request.Builder().url(url).post(body).build()
 
-        client.newCall(request).execute().use { response ->
-            println(response.body?.string())
+        try {
+            client.newCall(request).execute().use { response ->
+                println(response.body?.string())
+            }
+        } catch (e: Exception) {
+            println("Ошибка при отправке запроса: ${e.message}")
         }
     }
 }

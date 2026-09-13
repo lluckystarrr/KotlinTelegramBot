@@ -1,5 +1,6 @@
 package org.example.KTB.lesson_1
 
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
@@ -13,14 +14,17 @@ data class TelegramResponse(
 
 @Serializable
 data class TelegramUpdate(
-    val update_id: Int,
+    @SerialName("update_id")
+    val updateId: Int,
     val message: TelegramMessage? = null,
-    val callback_query: TelegramCallbackQuery? = null
+    @SerialName("callback_query")
+    val callbackQuery: TelegramCallbackQuery? = null
 )
 
 @Serializable
 data class TelegramMessage(
-    val message_id: Int? = null,
+    @SerialName("message_id")
+    val messageId: Int? = null,
     val chat: TelegramChat,
     val text: String? = null
 )
@@ -66,12 +70,17 @@ fun main(args: Array<String>) {
         val updatesJson = telegramBotService.getUpdates(updateId)
         println(updatesJson)
 
-        val updates = json.decodeFromString<TelegramResponse>(updatesJson)
+        val updates = try {
+            json.decodeFromString<TelegramResponse>(updatesJson)
+        } catch (e: Exception) {
+            println("Ошибка при обработке JSON: ${e.message}")
+            continue
+        }
 
         for (update in updates.result) {
-            updateId = update.update_id + 1
+            updateId = update.updateId + 1
 
-            val callbackQuery = update.callback_query
+            val callbackQuery = update.callbackQuery
 
             if (callbackQuery != null) {
                 val callbackData = callbackQuery.data
