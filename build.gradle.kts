@@ -1,6 +1,7 @@
 plugins {
     kotlin("jvm") version "2.1.10"
     kotlin("plugin.serialization") version "2.1.10"
+    id("com.gradleup.shadow") version "8.3.6"
 }
 
 group = "org.example"
@@ -22,5 +23,10 @@ tasks.test {
 }
 
 kotlin {
-    jvmToolchain(23)
+    jvmToolchain(21)
+}
+tasks.shadowJar {
+    manifest {
+        attributes["Main-Class"] = "org.example.KTB.lesson_1.TelegramKt"
+    }
 }
