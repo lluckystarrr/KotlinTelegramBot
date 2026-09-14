@@ -23,6 +23,7 @@ data class Question(
 )
 
 class LearnWordsTrainer(
+    private val chatId: Long? = null,
     private val answersCountToLearn: Int = 3,
     private val numberOfQuestionWords: Int = 4
 ) {
@@ -33,12 +34,21 @@ class LearnWordsTrainer(
         val learnedCount = dictionary.count {
             it.isLearned(answersCountToLearn)
         }
+
         val totalCount = dictionary.size
 
         return Statistics(
             totalCount = totalCount,
             learnedCount = learnedCount
         )
+    }
+
+    fun resetStatistics() {
+        dictionary.forEach {
+            it.correctAnswersCount = 0
+        }
+
+        saveDictionary(dictionary)
     }
 
     fun getNextQuestion(): Question? {
@@ -88,7 +98,12 @@ class LearnWordsTrainer(
 
     private fun loadDictionary(): List<Word> {
         val dictionary = mutableListOf<Word>()
-        val wordsFile = File("words.txt")
+
+        val wordsFile = if (chatId != null) {
+            File("words_$chatId.txt")
+        } else {
+            File("words.txt")
+        }
 
         try {
             if (!wordsFile.exists()) {
@@ -129,7 +144,11 @@ class LearnWordsTrainer(
     }
 
     private fun saveDictionary(words: List<Word>) {
-        val wordsFile = File("words.txt")
+        val wordsFile = if (chatId != null) {
+            File("words_$chatId.txt")
+        } else {
+            File("words.txt")
+        }
 
         try {
             wordsFile.writeText("")
