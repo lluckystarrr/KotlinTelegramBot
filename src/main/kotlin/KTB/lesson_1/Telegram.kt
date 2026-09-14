@@ -66,8 +66,6 @@ fun main(args: Array<String>) {
 
     val telegramBotService = TelegramBotService(botToken)
 
-    // Для каждого пользователя будет свой LearnWordsTrainer.
-    // Ключ - chatId пользователя.
     val trainers = HashMap<Long, LearnWordsTrainer>()
 
     val json = Json {
@@ -107,9 +105,8 @@ fun main(args: Array<String>) {
 
                 if (chatId != null && callbackData != null) {
 
-                    // Получаем тренер именно этого пользователя.
                     val trainer = trainers.getOrPut(chatId) {
-                        LearnWordsTrainer()
+                        LearnWordsTrainer(chatId)
                     }
 
                     when {
@@ -209,11 +206,8 @@ fun main(args: Array<String>) {
                 when (text) {
 
                     "/start" -> {
-
-                        // Создаём тренер для пользователя,
-                        // если его ещё нет.
                         trainers.getOrPut(chatId) {
-                            LearnWordsTrainer()
+                            LearnWordsTrainer(chatId)
                         }
 
                         telegramBotService.sendMenu(
