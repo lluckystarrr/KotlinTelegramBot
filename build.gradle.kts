@@ -25,3 +25,8 @@ tasks.test {
 kotlin {
     jvmToolchain(21)
 }
+tasks.shadowJar {
+    manifest {
+        attributes["Main-Class"] = "org.example.KTB.lesson_1.TelegramKt"
+    }
+}
