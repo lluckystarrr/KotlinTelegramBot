@@ -51,3 +51,12 @@ jobs:
           password: ${{ secrets.SSH_PASSWORD }}
           script: |
             systemctl restart english-learning-bot
+
+      - name: Check Remote Service
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.SSH_USER }}
+          password: ${{ secrets.SSH_PASSWORD }}
+          script: |
+            systemctl is-active english-learning-bot
