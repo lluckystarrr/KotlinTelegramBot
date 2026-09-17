@@ -18,148 +18,262 @@ import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.nio.file.Files
 
+
 const val CALLBACK_LEARN_WORDS = "learn_words_clicked"
 const val CALLBACK_STATISTICS = "statistics_clicked"
 const val CALLBACK_RESET_STATISTICS = "reset_statistics_clicked"
 const val CALLBACK_DATA_ANSWER_PREFIX = "answer_"
-const val TELEGRAM_FILE_URL = "https://api.telegram.org/file/bot"
+
+const val TELEGRAM_FILE_URL =
+    "https://api.telegram.org/file/bot"
+
+
 
 @Serializable
 data class SendMessageRequest(
     @SerialName("chat_id")
     val chatId: String,
+
     val text: String,
+
     @SerialName("reply_markup")
     val replyMarkup: InlineKeyboardMarkup? = null
 )
 
+
+
+@Serializable
+data class SendMessageResponse(
+    val ok: Boolean,
+
+    val result: TelegramSentMessage? = null,
+
+    val description: String? = null
+)
+
+
+
+@Serializable
+data class TelegramSentMessage(
+
+    @SerialName("message_id")
+    val messageId: Long
+)
+
+
+
+@Serializable
+data class EditMessageTextRequest(
+
+    @SerialName("chat_id")
+    val chatId: Long,
+
+    @SerialName("message_id")
+    val messageId: Long,
+    val text: String,
+
+    @SerialName("reply_markup")
+val replyMarkup: InlineKeyboardMarkup? = null
+)
+
+
+
+@Serializable
+data class EditMessageTextResponse(
+
+    val ok: Boolean,
+
+    val description: String? = null
+)
+
+
+
 @Serializable
 data class InlineKeyboardMarkup(
+
     @SerialName("inline_keyboard")
-    val inlineKeyboard: List<List<InlineKeyboardButton>>
+    val inlineKeyboard:
+    List<List<InlineKeyboardButton>>
 )
+
+
 
 @Serializable
 data class InlineKeyboardButton(
+
     val text: String,
+
     @SerialName("callback_data")
     val callbackData: String
 )
 
+
+
 @Serializable
 data class AnswerCallbackQueryRequest(
+
     @SerialName("callback_query_id")
     val callbackQueryId: String
 )
 
+
+
 @Serializable
 data class GetFileRequest(
+
     @SerialName("file_id")
     val fileId: String
 )
 
+
+
 @Serializable
 data class GetFileResponse(
+
     val ok: Boolean,
+
     val result: TelegramFile? = null
 )
 
+
+
 @Serializable
 data class TelegramFile(
+
     @SerialName("file_id")
     val fileId: String,
+
     @SerialName("file_unique_id")
     val fileUniqueId: String,
+
     @SerialName("file_size")
     val fileSize: Long? = null,
+
     @SerialName("file_path")
     val filePath: String
 )
 
+
+
 @Serializable
 data class SendPhotoResponse(
+
     val ok: Boolean,
-    val result: TelegramPhotoMessage? = null
+
+    val result:
+    TelegramPhotoMessage? = null
 )
+
+
 
 @Serializable
 data class TelegramPhotoMessage(
+
     @SerialName("message_id")
     val messageId: Int? = null,
-    val photo: List<TelegramPhotoSize> = emptyList()
+
+    val photo:
+    List<TelegramPhotoSize> = emptyList()
 )
+
+
 
 @Serializable
 data class TelegramPhotoSize(
+
     @SerialName("file_id")
     val fileId: String,
+
     @SerialName("file_unique_id")
     val fileUniqueId: String,
+
     val width: Int,
+
     val height: Int,
+
     @SerialName("file_size")
     val fileSize: Long? = null
 )
+
+
 
 private fun File.toMultipartBody(
     chatId: String,
     hasSpoiler: Boolean,
     boundary: String
 ): MultipartBody {
+
     val mimeType =
         Files.probeContentType(toPath())
             ?: "application/octet-stream"
+
 
     val requestBody =
         asRequestBody(
             mimeType.toMediaType()
         )
 
+
     return MultipartBody.Builder(boundary)
         .setType(MultipartBody.FORM)
+
         .addFormDataPart(
             "chat_id",
             chatId
         )
+
         .addFormDataPart(
             "photo",
             name,
             requestBody
         )
+
         .addFormDataPart(
             "has_spoiler",
             hasSpoiler.toString()
         )
+
         .build()
 }
+
+
 
 class TelegramBotService(
     private val botToken: String
 ) {
 
-    private val client = OkHttpClient()
+    private val client =
+        OkHttpClient()
 
-    private val json = Json {
-        ignoreUnknownKeys = true
-    }
 
-    fun getUpdates(updateId: Int): String {
+    private val json =
+        Json {
+            ignoreUnknownKeys = true
+        }
+
+    fun getUpdates(
+        updateId: Int
+    ): String {
 
         val url =
             "${TELEGRAM_API_BASE}${botToken}/getUpdates?offset=$updateId"
+
 
         val request =
             Request.Builder()
                 .url(url)
                 .build()
 
+
         return try {
 
             client.newCall(request)
                 .execute()
                 .use { response ->
+
                     response.body?.string() ?: ""
                 }
+
 
         } catch (e: Exception) {
 
@@ -171,18 +285,25 @@ class TelegramBotService(
         }
     }
 
-    fun getFile(fileId: String): String {
+
+
+    fun getFile(
+        fileId: String
+    ): String {
 
         val url =
             "${TELEGRAM_API_BASE}${botToken}/getFile"
+
 
         val requestBody =
             GetFileRequest(
                 fileId = fileId
             )
 
+
         val jsonString =
             json.encodeToString(requestBody)
+
 
         val request =
             Request.Builder()
@@ -194,13 +315,16 @@ class TelegramBotService(
                 )
                 .build()
 
+
         return try {
 
             client.newCall(request)
                 .execute()
                 .use { response ->
+
                     response.body?.string() ?: ""
                 }
+
 
         } catch (e: Exception) {
 
@@ -212,15 +336,17 @@ class TelegramBotService(
         }
     }
 
+
+
     fun downloadFile(
         filePath: String,
         fileName: String
     ): Boolean {
 
+
         val url =
             "$TELEGRAM_FILE_URL$botToken/$filePath"
 
-        println(url)
 
         val request =
             HttpRequest
@@ -229,7 +355,10 @@ class TelegramBotService(
                 .GET()
                 .build()
 
+
+
         return try {
+
 
             val response: HttpResponse<InputStream> =
                 HttpClient
@@ -239,17 +368,18 @@ class TelegramBotService(
                         HttpResponse.BodyHandlers.ofInputStream()
                     )
 
-            println(
-                "status code: ${response.statusCode()}"
-            )
 
-            if (response.statusCode() !in 200..299) {
+            if (
+                response.statusCode()
+                !in 200..299
+            ) {
 
                 response.body().close()
 
                 false
 
             } else {
+
 
                 response.body().use { input ->
 
@@ -261,24 +391,32 @@ class TelegramBotService(
                         }
                 }
 
+
                 true
             }
 
+
+
         } catch (e: Exception) {
+
 
             println(
                 "Ошибка скачивания файла: ${e.message}"
             )
 
+
             false
         }
     }
+
+
 
     fun sendMessage(
         chatId: String,
         text: String,
         replyMarkup: InlineKeyboardMarkup? = null
-    ) {
+    ): Long? {
+
 
         val requestBody =
             SendMessageRequest(
@@ -287,14 +425,154 @@ class TelegramBotService(
                 replyMarkup = replyMarkup
             )
 
+
         val jsonString =
             json.encodeToString(requestBody)
 
-        sendPostRequest(
-            "sendMessage",
-            jsonString
-        )
+
+
+        val responseBody =
+            sendPostRequest(
+                "sendMessage",
+                jsonString
+            )
+
+
+
+        if (responseBody.isBlank()) {
+
+            return null
+        }
+
+
+
+        return try {
+
+
+            val response =
+                json.decodeFromString<SendMessageResponse>(
+                    responseBody
+                )
+
+
+
+            if (!response.ok) {
+
+                println(
+                    "Ошибка sendMessage: " +
+                            response.description
+                )
+            }
+
+
+
+            response.result?.messageId
+
+
+
+        } catch (e: Exception) {
+
+
+            println(
+                "Ошибка обработки ответа sendMessage: " +
+                        "${e.message}"
+            )
+
+
+            null
+        }
     }
+
+
+
+    fun editMessage(
+        chatId: Long,
+        messageId: Long,
+        message: String,
+        replyMarkup: InlineKeyboardMarkup? = null
+    ): Boolean {
+
+
+        val requestBody =
+            EditMessageTextRequest(
+                chatId = chatId,
+                messageId = messageId,
+                text = message
+            )
+
+
+
+        val jsonString =
+            json.encodeToString(requestBody)
+
+
+
+        val responseBody =
+            sendPostRequest(
+                "editMessageText",
+                jsonString
+            )
+
+
+
+        if (responseBody.isBlank()) {
+
+            return false
+        }
+
+
+
+        return try {
+
+
+            val response =
+                json.decodeFromString<EditMessageTextResponse>(
+                    responseBody
+                )
+
+
+
+            if (!response.ok) {
+
+
+                if (
+                    response.description
+                        ?.contains(
+                            "message is not modified"
+                        ) == true
+                ) {
+
+                    return true
+                }
+
+
+
+                println(
+                    "Ошибка editMessageText: " +
+                            response.description
+                )
+            }
+
+
+
+            response.ok
+
+
+
+        } catch (e: Exception) {
+
+
+            println(
+                "Ошибка обработки ответа editMessageText: " +
+                        "${e.message}"
+            )
+
+
+            false
+        }
+    }
+
+
 
     fun sendPhoto(
         chatId: String,
@@ -302,20 +580,29 @@ class TelegramBotService(
         hasSpoiler: Boolean = false
     ): String? {
 
+
         val imageFile =
             File(imagePath)
 
+
+
         if (!imageFile.exists()) {
+
 
             println(
                 "Файл изображения не найден: $imagePath"
             )
 
+
             return null
         }
 
+
+
         val boundary =
             "----TelegramBotBoundary${System.nanoTime()}"
+
+
 
         val multipartBody =
             imageFile.toMultipartBody(
@@ -324,8 +611,12 @@ class TelegramBotService(
                 boundary = boundary
             )
 
+
+
         val url =
             "${TELEGRAM_API_BASE}${botToken}/sendPhoto"
+
+
 
         val request =
             Request.Builder()
@@ -333,29 +624,33 @@ class TelegramBotService(
                 .post(multipartBody)
                 .build()
 
+
+
         return try {
+
 
             client.newCall(request)
                 .execute()
                 .use { response ->
 
+
                     val responseBody =
                         response.body?.string()
 
-                    println(
-                        "sendPhoto response: $responseBody"
-                    )
 
-                    if (
-                        responseBody == null
-                    ) {
+
+                    if (responseBody == null) {
+
                         null
+
                     } else {
+
 
                         val photoResponse =
                             json.decodeFromString<SendPhotoResponse>(
                                 responseBody
                             )
+
 
                         photoResponse
                             .result
@@ -367,11 +662,15 @@ class TelegramBotService(
                     }
                 }
 
+
+
         } catch (e: Exception) {
+
 
             println(
                 "Ошибка отправки изображения: ${e.message}"
             )
+
 
             null
         }
@@ -382,12 +681,16 @@ class TelegramBotService(
         fileId: String
     ): Boolean {
 
+
         @Serializable
         data class SendPhotoRequest(
+
             @SerialName("chat_id")
             val chatId: String,
+
             val photo: String
         )
+
 
         val requestBody =
             SendPhotoRequest(
@@ -395,11 +698,16 @@ class TelegramBotService(
                 photo = fileId
             )
 
+
         val jsonString =
             json.encodeToString(requestBody)
 
+
+
         val url =
             "${TELEGRAM_API_BASE}${botToken}/sendPhoto"
+
+
 
         val body =
             jsonString.toRequestBody(
@@ -407,44 +715,51 @@ class TelegramBotService(
                     .toMediaType()
             )
 
+
+
         val request =
             Request.Builder()
                 .url(url)
                 .post(body)
                 .build()
 
+
+
         return try {
+
 
             client.newCall(request)
                 .execute()
                 .use { response ->
 
-                    val responseBody =
-                        response.body?.string()
-
-                    println(
-                        "sendPhoto by file_id response: " +
-                                responseBody
-                    )
-
                     response.isSuccessful
                 }
 
+
+
         } catch (e: Exception) {
+
 
             println(
                 "Ошибка отправки изображения по file_id: " +
                         "${e.message}"
             )
 
+
             false
         }
     }
 
-    fun sendMenu(chatId: String) {
+
+
+    fun sendMenu(
+        chatId: String
+    ): Long? {
+
 
         val replyMarkup =
             InlineKeyboardMarkup(
+
                 inlineKeyboard = listOf(
 
                     listOf(
@@ -455,6 +770,7 @@ class TelegramBotService(
                         )
                     ),
 
+
                     listOf(
                         InlineKeyboardButton(
                             text = "Статистика",
@@ -462,6 +778,7 @@ class TelegramBotService(
                                 CALLBACK_STATISTICS
                         )
                     ),
+
 
                     listOf(
                         InlineKeyboardButton(
@@ -473,52 +790,78 @@ class TelegramBotService(
                 )
             )
 
-        sendMessage(
-            chatId,
-            "Главное меню:",
-            replyMarkup
+
+
+        return sendMessage(
+            chatId = chatId,
+            text = "Главное меню:",
+            replyMarkup = replyMarkup
         )
     }
+
+
+
 
     fun sendQuestion(
         chatId: String,
         question: Question
-    ) {
+    ): Long? {
+
 
         val buttons =
             question.variants.mapIndexed { index, word ->
 
+
                 InlineKeyboardButton(
+
                     text = word.translate,
+
                     callbackData =
                         "$CALLBACK_DATA_ANSWER_PREFIX$index"
                 )
             }
 
+
+
         val replyMarkup =
             InlineKeyboardMarkup(
+
                 inlineKeyboard =
                     listOf(buttons)
             )
 
-        sendMessage(
-            chatId,
-            "Как переводится слово «${question.correctAnswer.original}»?",
-            replyMarkup
+
+
+        return sendMessage(
+
+            chatId = chatId,
+
+            text =
+                "Как переводится слово «${question.correctAnswer.original}»?",
+
+            replyMarkup = replyMarkup
         )
     }
+
+
+
 
     fun answerCallbackQuery(
         callbackQueryId: String
     ) {
+
 
         val requestBody =
             AnswerCallbackQueryRequest(
                 callbackQueryId = callbackQueryId
             )
 
+
+
         val jsonString =
             json.encodeToString(requestBody)
+
+
 
         sendPostRequest(
             "answerCallbackQuery",
@@ -526,19 +869,27 @@ class TelegramBotService(
         )
     }
 
+
+
+
     private fun sendPostRequest(
         method: String,
-        json: String
-    ) {
+        jsonString: String
+    ): String {
+
 
         val url =
             "${TELEGRAM_API_BASE}${botToken}/$method"
 
+
+
         val body =
-            json.toRequestBody(
+            jsonString.toRequestBody(
                 "application/json; charset=utf-8"
                     .toMediaType()
             )
+
+
 
         val request =
             Request.Builder()
@@ -546,22 +897,31 @@ class TelegramBotService(
                 .post(body)
                 .build()
 
-        try {
+
+
+        return try {
+
 
             client.newCall(request)
                 .execute()
                 .use { response ->
 
-                    println(
-                        response.body?.string()
-                    )
+
+                    response.body?.string()
+                        ?: ""
                 }
 
+
+
         } catch (e: Exception) {
+
 
             println(
                 "Ошибка при отправке запроса: ${e.message}"
             )
+
+
+            ""
         }
     }
 }
