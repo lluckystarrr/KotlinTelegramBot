@@ -49,6 +49,9 @@ data class Document(
     @SerialName("file_id")
     val fileId: String,
 
+    @SerialName("file_unique_id")
+    val fileUniqueId: String,
+
     @SerialName("file_name")
     val fileName: String? = null,
 
@@ -279,7 +282,6 @@ fun main(args: Array<String>) {
                     }
 
 
-                // Обработка файла
                 if (message.document != null) {
 
                     val fileId =
@@ -327,7 +329,7 @@ fun main(args: Array<String>) {
 
 
                     val fileName =
-                        "download_$chatId.txt"
+                        "download_${message.document.fileUniqueId}.txt"
 
 
                     val downloaded =
