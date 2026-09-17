@@ -16,6 +16,7 @@ import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
+import java.nio.file.Files
 
 const val CALLBACK_LEARN_WORDS = "learn_words_clicked"
 const val CALLBACK_STATISTICS = "statistics_clicked"
@@ -105,9 +106,13 @@ private fun File.toMultipartBody(
     hasSpoiler: Boolean,
     boundary: String
 ): MultipartBody {
+    val mimeType =
+        Files.probeContentType(toPath())
+            ?: "application/octet-stream"
+
     val requestBody =
         asRequestBody(
-            "image/jpeg".toMediaType()
+            mimeType.toMediaType()
         )
 
     return MultipartBody.Builder(boundary)
@@ -310,7 +315,7 @@ class TelegramBotService(
         }
 
         val boundary =
-            "----TelegramBotBoundary"
+            "----TelegramBotBoundary${System.nanoTime()}"
 
         val multipartBody =
             imageFile.toMultipartBody(
