@@ -60,31 +60,24 @@ fun checkNextQuestionAndSend(
     telegramBotService: TelegramBotService,
     chatId: String
 ) {
-
     val question =
         trainer.getNextQuestion()
 
     if (question == null) {
-
         telegramBotService.sendMessage(
             chatId = chatId,
             text = "Все слова в словаре выучены"
         )
-
     } else {
-
         val correctAnswer =
             question.correctAnswer
 
         correctAnswer.imageFileId?.let { fileId ->
-
             telegramBotService.sendPhotoByFileId(
                 chatId = chatId,
                 fileId = fileId
             )
-
         } ?: correctAnswer.imagePath?.let { imagePath ->
-
             val fileId =
                 telegramBotService.sendPhoto(
                     chatId = chatId,
@@ -109,7 +102,6 @@ fun checkNextQuestionAndSend(
 fun createStatisticsMessage(
     trainer: LearnWordsTrainer
 ): String {
-
     val statistics =
         trainer.getStatistics()
 
@@ -142,34 +134,66 @@ fun createStatisticsMessage(
             "Прогресс: [$progressBar] $percent%"
 }
 
+fun sendAndSaveMessage(
+    chatId: Long,
+    message: String,
+    telegramBotService: TelegramBotService,
+    dynamicMessage: DynamicMessage
+) {
+    val messageId =
+        telegramBotService.sendMessage(
+            chatId = chatId.toString(),
+            text = message
+        )
+
+    messageId?.let {
+        dynamicMessage.setMessageId(it)
+        dynamicMessage.addMessage(message)
+    }
+}
+
 fun updateStatisticsMessage(
     chatId: Long,
     trainer: LearnWordsTrainer,
     telegramBotService: TelegramBotService,
     dynamicMessage: DynamicMessage
 ) {
-
-    val messageId =
-        dynamicMessage.messageId
-            ?: return
-
     val message =
         createStatisticsMessage(trainer)
 
-    if (
+    val messageId =
+        dynamicMessage.messageId
+
+    if (messageId == null) {
+        sendAndSaveMessage(
+            chatId = chatId,
+            message = message,
+            telegramBotService = telegramBotService,
+            dynamicMessage = dynamicMessage
+        )
+        return
+    }
+
+    val edited =
         telegramBotService.editMessage(
             chatId = chatId,
             messageId = messageId,
             message = message
         )
-    ) {
 
+    if (edited) {
         dynamicMessage.addMessage(message)
+    } else {
+        sendAndSaveMessage(
+            chatId = chatId,
+            message = message,
+            telegramBotService = telegramBotService,
+            dynamicMessage = dynamicMessage
+        )
     }
 }
 
 fun main(args: Array<String>) {
-
     val botToken =
         args[0]
 
@@ -190,7 +214,6 @@ fun main(args: Array<String>) {
         }
 
     while (true) {
-
         Thread.sleep(2000)
 
         val updatesJson =
@@ -200,22 +223,17 @@ fun main(args: Array<String>) {
 
         val updates =
             try {
-
                 json.decodeFromString<TelegramResponse>(
                     updatesJson
                 )
-
             } catch (e: Exception) {
-
                 println(
                     "Ошибка при обработке JSON: ${e.message}"
                 )
-
                 continue
             }
 
         for (update in updates.result) {
-
             updateId =
                 update.updateId + 1
 
@@ -223,7 +241,6 @@ fun main(args: Array<String>) {
                 update.callbackQuery
 
             if (callbackQuery != null) {
-
                 val callbackData =
                     callbackQuery.data
 
@@ -240,7 +257,6 @@ fun main(args: Array<String>) {
                     chatId != null &&
                     callbackData != null
                 ) {
-
                     val trainer =
                         trainers.getOrPut(chatId) {
                             LearnWordsTrainer(chatId)
@@ -252,7 +268,6 @@ fun main(args: Array<String>) {
                         }
 
                     when {
-
                         callbackData ==
                                 CALLBACK_LEARN_WORDS -> {
 
@@ -271,16 +286,14 @@ fun main(args: Array<String>) {
                                     trainer
                                 )
 
-                            val messageId =
-                                telegramBotService.sendMessage(
-                                    chatId = chatId.toString(),
-                                    text = message
-                                )
-
-                            messageId?.let {
-                                dynamicMessage.setMessageId(it)
-                                dynamicMessage.addMessage(message)
-                            }
+                            sendAndSaveMessage(
+                                chatId = chatId,
+                                message = message,
+                                telegramBotService =
+                                    telegramBotService,
+                                dynamicMessage =
+                                    dynamicMessage
+                            )
                         }
 
                         callbackData ==
@@ -288,34 +301,44 @@ fun main(args: Array<String>) {
 
                             trainer.resetStatistics()
 
+                            val message =
+                                createStatisticsMessage(
+                                    trainer
+                                )
+
                             val messageId =
                                 dynamicMessage.messageId
 
                             if (messageId != null) {
-
-                                val message =
-                                    createStatisticsMessage(
-                                        trainer
-                                    )
-
-                                if (
+                                val edited =
                                     telegramBotService.editMessage(
                                         chatId = chatId,
                                         messageId = messageId,
                                         message = message
                                     )
-                                ) {
 
+                                if (edited) {
                                     dynamicMessage.addMessage(
                                         message
                                     )
+                                } else {
+                                    sendAndSaveMessage(
+                                        chatId = chatId,
+                                        message = message,
+                                        telegramBotService =
+                                            telegramBotService,
+                                        dynamicMessage =
+                                            dynamicMessage
+                                    )
                                 }
-
                             } else {
-
-                                telegramBotService.sendMessage(
-                                    chatId.toString(),
-                                    "Статистика сброшена!"
+                                sendAndSaveMessage(
+                                    chatId = chatId,
+                                    message = message,
+                                    telegramBotService =
+                                        telegramBotService,
+                                    dynamicMessage =
+                                        dynamicMessage
                                 )
                             }
                         }
@@ -340,10 +363,13 @@ fun main(args: Array<String>) {
                                 )
 
                             if (isCorrect) {
-
-                                telegramBotService.sendMessage(
-                                    chatId.toString(),
-                                    "Правильно!"
+                                sendAndSaveMessage(
+                                    chatId = chatId,
+                                    message = "Правильно!",
+                                    telegramBotService =
+                                        telegramBotService,
+                                    dynamicMessage =
+                                        dynamicMessage
                                 )
 
                                 updateStatisticsMessage(
@@ -354,17 +380,20 @@ fun main(args: Array<String>) {
                                     dynamicMessage =
                                         dynamicMessage
                                 )
-
                             } else {
-
                                 val correctAnswer =
                                     question?.correctAnswer
 
-                                telegramBotService.sendMessage(
-                                    chatId.toString(),
-                                    "Неправильно! " +
-                                            "${correctAnswer?.original} – это " +
-                                            "${correctAnswer?.translate}"
+                                sendAndSaveMessage(
+                                    chatId = chatId,
+                                    message =
+                                        "Неправильно! " +
+                                                "${correctAnswer?.original} – это " +
+                                                "${correctAnswer?.translate}",
+                                    telegramBotService =
+                                        telegramBotService,
+                                    dynamicMessage =
+                                        dynamicMessage
                                 )
                             }
 
@@ -384,7 +413,6 @@ fun main(args: Array<String>) {
                 update.message
 
             if (message != null) {
-
                 val chatId =
                     message.chat.id
 
@@ -399,7 +427,6 @@ fun main(args: Array<String>) {
                     }
 
                 if (message.document != null) {
-
                     val fileId =
                         message.document.fileId
 
@@ -410,21 +437,23 @@ fun main(args: Array<String>) {
 
                     val fileResponse =
                         try {
-
                             json.decodeFromString<GetFileResponse>(
                                 fileJson
                             )
-
                         } catch (e: Exception) {
-
                             println(
                                 "Ошибка при получении информации о файле: " +
                                         "${e.message}"
                             )
 
-                            telegramBotService.sendMessage(
-                                chatId.toString(),
-                                "Не удалось получить информацию о файле."
+                            sendAndSaveMessage(
+                                chatId = chatId,
+                                message =
+                                    "Не удалось получить информацию о файле.",
+                                telegramBotService =
+                                    telegramBotService,
+                                dynamicMessage =
+                                    dynamicMessage
                             )
 
                             continue
@@ -434,10 +463,14 @@ fun main(args: Array<String>) {
                         fileResponse.result?.filePath
 
                     if (filePath == null) {
-
-                        telegramBotService.sendMessage(
-                            chatId.toString(),
-                            "Не удалось получить путь к файлу."
+                        sendAndSaveMessage(
+                            chatId = chatId,
+                            message =
+                                "Не удалось получить путь к файлу.",
+                            telegramBotService =
+                                telegramBotService,
+                            dynamicMessage =
+                                dynamicMessage
                         )
 
                         continue
@@ -453,10 +486,14 @@ fun main(args: Array<String>) {
                         )
 
                     if (!downloaded) {
-
-                        telegramBotService.sendMessage(
-                            chatId.toString(),
-                            "Не удалось скачать файл."
+                        sendAndSaveMessage(
+                            chatId = chatId,
+                            message =
+                                "Не удалось скачать файл.",
+                            telegramBotService =
+                                telegramBotService,
+                            dynamicMessage =
+                                dynamicMessage
                         )
 
                         continue
@@ -468,17 +505,24 @@ fun main(args: Array<String>) {
                         )
 
                     if (wordsAdded) {
-
-                        telegramBotService.sendMessage(
-                            chatId.toString(),
-                            "Файл обработан. Слова добавлены!"
+                        sendAndSaveMessage(
+                            chatId = chatId,
+                            message =
+                                "Файл обработан. Слова добавлены!",
+                            telegramBotService =
+                                telegramBotService,
+                            dynamicMessage =
+                                dynamicMessage
                         )
-
                     } else {
-
-                        telegramBotService.sendMessage(
-                            chatId.toString(),
-                            "Не удалось обработать файл."
+                        sendAndSaveMessage(
+                            chatId = chatId,
+                            message =
+                                "Не удалось обработать файл.",
+                            telegramBotService =
+                                telegramBotService,
+                            dynamicMessage =
+                                dynamicMessage
                         )
                     }
 
@@ -486,16 +530,13 @@ fun main(args: Array<String>) {
                 }
 
                 when (message.text) {
-
                     "/start" -> {
-
                         telegramBotService.sendMenu(
                             chatId.toString()
                         )
                     }
 
                     "/undo" -> {
-
                         val messageId =
                             dynamicMessage.messageId
 
@@ -506,29 +547,45 @@ fun main(args: Array<String>) {
                             messageId != null &&
                             previousMessage != null
                         ) {
+                            val edited =
+                                telegramBotService.editMessage(
+                                    chatId = chatId,
+                                    messageId = messageId,
+                                    message = previousMessage
+                                )
 
-                            telegramBotService.editMessage(
-                                chatId = chatId,
-                                messageId = messageId,
-                                message = previousMessage
-                            )
-
+                            if (!edited) {
+                                sendAndSaveMessage(
+                                    chatId = chatId,
+                                    message = previousMessage,
+                                    telegramBotService =
+                                        telegramBotService,
+                                    dynamicMessage =
+                                        dynamicMessage
+                                )
+                            }
                         } else {
-
-                            telegramBotService.sendMessage(
-                                chatId.toString(),
-                                "Нет предыдущего сообщения для отмены."
+                            sendAndSaveMessage(
+                                chatId = chatId,
+                                message =
+                                    "Нет предыдущего сообщения для отмены.",
+                                telegramBotService =
+                                    telegramBotService,
+                                dynamicMessage =
+                                    dynamicMessage
                             )
                         }
                     }
 
                     else -> {
-
                         if (message.text != null) {
-
-                            telegramBotService.sendMessage(
-                                chatId.toString(),
-                                message.text
+                            sendAndSaveMessage(
+                                chatId = chatId,
+                                message = message.text,
+                                telegramBotService =
+                                    telegramBotService,
+                                dynamicMessage =
+                                    dynamicMessage
                             )
                         }
                     }
