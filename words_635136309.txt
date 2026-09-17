@@ -1,0 +1,7 @@
+hello|привет|3|images/hello.jpg|AgACAgIAAxkDAAIBH2qrv3D2VTVjjDq7Alj9J1VOm12MAAKKG2sbUd5YSaHsF-oGtndFAQADAgADdwADPQQ
+dog|собака|3|images/dog.jpg|AgACAgIAAxkDAAIBNmqrv52zhtLtssFE9RFUxy-fal29AAKLG2sbUd5YSZQhHNLCmStCAQADAgADeQADPQQ
+cat|кошка|0|images/cat.jpg|AgACAgIAAxkDAAIBSGqrv7f5hyKx-mCHC8adw3WKaNa_AAKNG2sbUd5YSem2imf6ocZwAQADAgADeQADPQQ
+apple|яблоко|3||
+book|книга|1||
+sun|солнце|1||
+moon|луна|2||
