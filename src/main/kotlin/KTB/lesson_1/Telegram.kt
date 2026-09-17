@@ -227,10 +227,13 @@ fun checkNextQuestionAndSend(
 
 
     messageId?.let {
-
         dynamicMessage.setMessageId(it)
+        dynamicMessage.addMessage(
+            "Как переводится слово «${question.correctAnswer.original}»?"
+        )
     }
 }
+
 fun main(args: Array<String>) {
 
     val botToken =
@@ -293,7 +296,6 @@ fun main(args: Array<String>) {
                 update.updateId + 1
 
 
-
             val callbackQuery =
                 update.callbackQuery
 
@@ -332,7 +334,6 @@ fun main(args: Array<String>) {
                         }
 
 
-
                     val dynamicMessage =
                         dynamicMessages.getOrPut(chatId) {
 
@@ -357,7 +358,6 @@ fun main(args: Array<String>) {
                         }
 
 
-
                         callbackData ==
                                 CALLBACK_STATISTICS -> {
 
@@ -371,7 +371,6 @@ fun main(args: Array<String>) {
                                 dynamicMessage = dynamicMessage
                             )
                         }
-
 
 
                         callbackData ==
@@ -391,7 +390,6 @@ fun main(args: Array<String>) {
                         }
 
 
-
                         callbackData.startsWith(
                             CALLBACK_DATA_ANSWER_PREFIX
                         ) -> {
@@ -405,10 +403,8 @@ fun main(args: Array<String>) {
                                     .toInt()
 
 
-
                             val question =
                                 trainer.getCurrentQuestion()
-
 
 
                             val isCorrect =
@@ -436,7 +432,6 @@ fun main(args: Array<String>) {
                                     telegramBotService = telegramBotService,
                                     dynamicMessage = dynamicMessage
                                 )
-
 
 
                             } else {
@@ -475,7 +470,6 @@ fun main(args: Array<String>) {
             }
 
 
-
             val message =
                 update.message
 
@@ -488,13 +482,11 @@ fun main(args: Array<String>) {
                     message.chat.id
 
 
-
                 val trainer =
                     trainers.getOrPut(chatId) {
 
                         LearnWordsTrainer(chatId)
                     }
-
 
 
                 val dynamicMessage =
@@ -512,12 +504,10 @@ fun main(args: Array<String>) {
                         message.document.fileId
 
 
-
                     val fileJson =
                         telegramBotService.getFile(
                             fileId
                         )
-
 
 
                     val fileResponse =
@@ -538,7 +528,6 @@ fun main(args: Array<String>) {
 
                             continue
                         }
-
 
 
                     val filePath =
@@ -582,7 +571,6 @@ fun main(args: Array<String>) {
                     }
 
 
-
                     val wordsAdded =
                         trainer.addWordsFromFile(
                             fileName
@@ -619,28 +607,26 @@ fun main(args: Array<String>) {
 
 
                     "/start" -> {
-
-
                         val messageId =
                             telegramBotService.sendMenu(
                                 chatId.toString()
                             )
 
-
                         messageId?.let {
 
                             dynamicMessage.setMessageId(it)
+
+                            dynamicMessage.addMessage(
+                                "Главное меню:"
+                            )
                         }
                     }
-
-
 
                     "/undo" -> {
 
 
                         val messageId =
                             dynamicMessage.messageId
-
 
 
                         val previousMessage =
@@ -686,7 +672,6 @@ fun main(args: Array<String>) {
                             )
                         }
                     }
-
 
 
                     else -> {
