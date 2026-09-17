@@ -1,6 +1,6 @@
-hello|привет|0
-dog|собака|0
-cat|кошка|0
+hello|привет|0|images/hello.jpg|
+dog|собака|0|images/dog.jpg|
+cat|кошка|0|images/cat.jpg|
 apple|яблоко|0
 book|книга|0
 sun|солнце|0

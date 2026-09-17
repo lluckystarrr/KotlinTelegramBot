@@ -4,9 +4,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
-
 const val TELEGRAM_API_BASE = "https://api.telegram.org/bot"
-
 
 @Serializable
 data class TelegramResponse(
@@ -15,67 +13,47 @@ data class TelegramResponse(
     val description: String? = null
 )
 
-
 @Serializable
 data class TelegramUpdate(
-
     @SerialName("update_id")
     val updateId: Int,
-
     val message: TelegramMessage? = null,
-
     @SerialName("callback_query")
     val callbackQuery: TelegramCallbackQuery? = null
 )
 
-
 @Serializable
 data class TelegramMessage(
-
     @SerialName("message_id")
     val messageId: Int? = null,
-
     val chat: TelegramChat,
-
     val text: String? = null,
-
     val document: Document? = null
 )
 
-
 @Serializable
 data class Document(
-
     @SerialName("file_id")
     val fileId: String,
-
     @SerialName("file_unique_id")
     val fileUniqueId: String,
-
     @SerialName("file_name")
     val fileName: String? = null,
-
     @SerialName("file_size")
     val fileSize: Long? = null
 )
-
 
 @Serializable
 data class TelegramChat(
     val id: Long
 )
 
-
 @Serializable
 data class TelegramCallbackQuery(
-
     val id: String,
-
     val data: String? = null,
-
     val message: TelegramMessage? = null
 )
-
 
 fun checkNextQuestionAndSend(
     trainer: LearnWordsTrainer,
@@ -83,7 +61,8 @@ fun checkNextQuestionAndSend(
     chatId: String
 ) {
 
-    val question = trainer.getNextQuestion()
+    val question =
+        trainer.getNextQuestion()
 
     if (question == null) {
 
@@ -94,17 +73,43 @@ fun checkNextQuestionAndSend(
 
     } else {
 
+        val correctAnswer =
+            question.correctAnswer
+
+        correctAnswer.imageFileId?.let { fileId ->
+
+            telegramBotService.sendPhotoByFileId(
+                chatId = chatId,
+                fileId = fileId
+            )
+
+        } ?: correctAnswer.imagePath?.let { imagePath ->
+
+            val fileId =
+                telegramBotService.sendPhoto(
+                    chatId = chatId,
+                    imagePath = imagePath
+                )
+
+            fileId?.let {
+                trainer.saveImageFileId(
+                    word = correctAnswer,
+                    fileId = it
+                )
+            }
+        }
+
         telegramBotService.sendQuestion(
-            chatId,
-            question
+            chatId = chatId,
+            question = question
         )
     }
 }
 
-
 fun main(args: Array<String>) {
 
-    val botToken = args[0]
+    val botToken =
+        args[0]
 
     var updateId = 0
 
@@ -119,29 +124,30 @@ fun main(args: Array<String>) {
             ignoreUnknownKeys = true
         }
 
-
     while (true) {
 
         Thread.sleep(2000)
 
         val updatesJson =
-            telegramBotService.getUpdates(updateId)
-
-        val updates = try {
-
-            json.decodeFromString<TelegramResponse>(
-                updatesJson
+            telegramBotService.getUpdates(
+                updateId
             )
 
-        } catch (e: Exception) {
+        val updates =
+            try {
 
-            println(
-                "Ошибка при обработке JSON: ${e.message}"
-            )
+                json.decodeFromString<TelegramResponse>(
+                    updatesJson
+                )
 
-            continue
-        }
+            } catch (e: Exception) {
 
+                println(
+                    "Ошибка при обработке JSON: ${e.message}"
+                )
+
+                continue
+            }
 
         for (update in updates.result) {
 
@@ -157,7 +163,9 @@ fun main(args: Array<String>) {
                     callbackQuery.data
 
                 val chatId =
-                    callbackQuery.message?.chat?.id
+                    callbackQuery.message
+                        ?.chat
+                        ?.id
 
                 telegramBotService.answerCallbackQuery(
                     callbackQuery.id
@@ -185,7 +193,6 @@ fun main(args: Array<String>) {
                             )
                         }
 
-
                         callbackData ==
                                 CALLBACK_STATISTICS -> {
 
@@ -194,13 +201,11 @@ fun main(args: Array<String>) {
 
                             telegramBotService.sendMessage(
                                 chatId.toString(),
-
                                 "Изучено слов: " +
                                         "${statistics.learnedCount} из " +
                                         "${statistics.totalCount}"
                             )
                         }
-
 
                         callbackData ==
                                 CALLBACK_RESET_STATISTICS -> {
@@ -209,11 +214,9 @@ fun main(args: Array<String>) {
 
                             telegramBotService.sendMessage(
                                 chatId.toString(),
-
                                 "Статистика сброшена!"
                             )
                         }
-
 
                         callbackData.startsWith(
                             CALLBACK_DATA_ANSWER_PREFIX
@@ -248,7 +251,6 @@ fun main(args: Array<String>) {
 
                                 telegramBotService.sendMessage(
                                     chatId.toString(),
-
                                     "Неправильно! " +
                                             "${correctAnswer?.original} – это " +
                                             "${correctAnswer?.translate}"
@@ -267,7 +269,6 @@ fun main(args: Array<String>) {
                 continue
             }
 
-
             val message =
                 update.message
 
@@ -280,7 +281,6 @@ fun main(args: Array<String>) {
                     trainers.getOrPut(chatId) {
                         LearnWordsTrainer(chatId)
                     }
-
 
                 if (message.document != null) {
 
@@ -302,7 +302,8 @@ fun main(args: Array<String>) {
                         } catch (e: Exception) {
 
                             println(
-                                "Ошибка при получении информации о файле: ${e.message}"
+                                "Ошибка при получении информации о файле: " +
+                                        "${e.message}"
                             )
 
                             telegramBotService.sendMessage(
@@ -312,7 +313,6 @@ fun main(args: Array<String>) {
 
                             continue
                         }
-
 
                     val filePath =
                         fileResponse.result?.filePath
@@ -327,17 +327,14 @@ fun main(args: Array<String>) {
                         continue
                     }
 
-
                     val fileName =
                         "download_${message.document.fileUniqueId}.txt"
-
 
                     val downloaded =
                         telegramBotService.downloadFile(
                             filePath,
                             fileName
                         )
-
 
                     if (!downloaded) {
 
@@ -349,12 +346,10 @@ fun main(args: Array<String>) {
                         continue
                     }
 
-
                     val wordsAdded =
                         trainer.addWordsFromFile(
                             fileName
                         )
-
 
                     if (wordsAdded) {
 
@@ -374,7 +369,6 @@ fun main(args: Array<String>) {
                     continue
                 }
 
-
                 when (message.text) {
 
                     "/start" -> {
@@ -383,7 +377,6 @@ fun main(args: Array<String>) {
                             chatId.toString()
                         )
                     }
-
 
                     else -> {
 
