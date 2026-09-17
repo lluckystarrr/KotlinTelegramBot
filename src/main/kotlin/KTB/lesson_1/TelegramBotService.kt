@@ -100,6 +100,34 @@ data class TelegramPhotoSize(
     val fileSize: Long? = null
 )
 
+private fun File.toMultipartBody(
+    chatId: String,
+    hasSpoiler: Boolean,
+    boundary: String
+): MultipartBody {
+    val requestBody =
+        asRequestBody(
+            "image/jpeg".toMediaType()
+        )
+
+    return MultipartBody.Builder(boundary)
+        .setType(MultipartBody.FORM)
+        .addFormDataPart(
+            "chat_id",
+            chatId
+        )
+        .addFormDataPart(
+            "photo",
+            name,
+            requestBody
+        )
+        .addFormDataPart(
+            "has_spoiler",
+            hasSpoiler.toString()
+        )
+        .build()
+}
+
 class TelegramBotService(
     private val botToken: String
 ) {
@@ -109,7 +137,6 @@ class TelegramBotService(
     private val json = Json {
         ignoreUnknownKeys = true
     }
-
 
     fun getUpdates(updateId: Int): String {
 
@@ -138,7 +165,6 @@ class TelegramBotService(
             ""
         }
     }
-
 
     fun getFile(fileId: String): String {
 
@@ -180,7 +206,6 @@ class TelegramBotService(
             ""
         }
     }
-
 
     fun downloadFile(
         filePath: String,
@@ -244,7 +269,6 @@ class TelegramBotService(
         }
     }
 
-
     fun sendMessage(
         chatId: String,
         text: String,
@@ -267,10 +291,10 @@ class TelegramBotService(
         )
     }
 
-
     fun sendPhoto(
         chatId: String,
-        imagePath: String
+        imagePath: String,
+        hasSpoiler: Boolean = false
     ): String? {
 
         val imageFile =
@@ -285,26 +309,15 @@ class TelegramBotService(
             return null
         }
 
-        val requestBody =
-            imageFile.asRequestBody(
-                "image/jpeg".toMediaType()
-            )
+        val boundary =
+            "----TelegramBotBoundary"
 
         val multipartBody =
-            MultipartBody.Builder()
-                .setType(
-                    MultipartBody.FORM
-                )
-                .addFormDataPart(
-                    "chat_id",
-                    chatId
-                )
-                .addFormDataPart(
-                    "photo",
-                    imageFile.name,
-                    requestBody
-                )
-                .build()
+            imageFile.toMultipartBody(
+                chatId = chatId,
+                hasSpoiler = hasSpoiler,
+                boundary = boundary
+            )
 
         val url =
             "${TELEGRAM_API_BASE}${botToken}/sendPhoto"
@@ -358,7 +371,6 @@ class TelegramBotService(
             null
         }
     }
-
 
     fun sendPhotoByFileId(
         chatId: String,
@@ -424,7 +436,6 @@ class TelegramBotService(
         }
     }
 
-
     fun sendMenu(chatId: String) {
 
         val replyMarkup =
@@ -464,7 +475,6 @@ class TelegramBotService(
         )
     }
 
-
     fun sendQuestion(
         chatId: String,
         question: Question
@@ -493,7 +503,6 @@ class TelegramBotService(
         )
     }
 
-
     fun answerCallbackQuery(
         callbackQueryId: String
     ) {
@@ -511,7 +520,6 @@ class TelegramBotService(
             jsonString
         )
     }
-
 
     private fun sendPostRequest(
         method: String,
