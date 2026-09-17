@@ -1,28 +1,45 @@
 package org.example.KTB.lesson_1
 
+data class SavedMessage(
+    val text: String,
+    val replyMarkup: InlineKeyboardMarkup? = null
+)
+
 class DynamicMessage {
 
     var messageId: Long? = null
-        private set
 
     private val messageHistory =
-        mutableListOf<String>()
+        mutableListOf<SavedMessage>()
 
-    fun setMessageId(messageId: Long) {
-        this.messageId = messageId
+
+    fun addMessage(
+        text: String,
+        replyMarkup: InlineKeyboardMarkup? = null
+    ) {
+
+        messageHistory.add(
+            SavedMessage(
+                text = text,
+                replyMarkup = replyMarkup
+            )
+        )
     }
 
-    fun addMessage(message: String) {
-        messageHistory.add(message)
-    }
 
-    fun getPreviousMessage(): String? {
-        if (messageHistory.size < 2) {
+    fun getPreviousMessage(): SavedMessage? {
+
+        if (messageHistory.isEmpty()) {
             return null
         }
 
-        messageHistory.removeLast()
+        return messageHistory.removeLast()
+    }
 
-        return messageHistory.last()
+    fun setMessageId(
+        id: Long
+    ) {
+
+        messageId = id
     }
 }

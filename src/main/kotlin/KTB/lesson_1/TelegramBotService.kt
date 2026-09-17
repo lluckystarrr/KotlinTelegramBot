@@ -70,8 +70,10 @@ data class EditMessageTextRequest(
 
     @SerialName("message_id")
     val messageId: Long,
+    val text: String,
 
-    val text: String
+    @SerialName("reply_markup")
+val replyMarkup: InlineKeyboardMarkup? = null
 )
 
 
@@ -486,7 +488,8 @@ class TelegramBotService(
     fun editMessage(
         chatId: Long,
         messageId: Long,
-        message: String
+        message: String,
+        replyMarkup: InlineKeyboardMarkup? = null
     ): Boolean {
 
 

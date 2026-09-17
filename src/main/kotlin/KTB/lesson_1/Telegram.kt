@@ -110,7 +110,10 @@ fun sendAndSaveMessage(
 
     messageId?.let {
         dynamicMessage.setMessageId(it)
-        dynamicMessage.addMessage(message)
+        dynamicMessage.addMessage(
+            text = message,
+            replyMarkup = replyMarkup
+        )
     }
 }
 
@@ -145,13 +148,15 @@ fun updateStatisticsMessage(
         telegramBotService.editMessage(
             chatId = chatId,
             messageId = messageId,
-            message = message
+            message = message,
+            replyMarkup = null
         )
-
 
     if (edited) {
 
-        dynamicMessage.addMessage(message)
+        dynamicMessage.addMessage(
+                text = message,
+            replyMarkup = null)
 
     } else {
 
@@ -644,7 +649,8 @@ fun main(args: Array<String>) {
                                 telegramBotService.editMessage(
                                     chatId = chatId,
                                     messageId = messageId,
-                                    message = previousMessage
+                                    message = previousMessage.text,
+                                    replyMarkup = previousMessage.replyMarkup
                                 )
 
 
@@ -654,7 +660,7 @@ fun main(args: Array<String>) {
 
                                 sendAndSaveMessage(
                                     chatId = chatId,
-                                    message = previousMessage,
+                                    message = previousMessage.text,
                                     telegramBotService = telegramBotService,
                                     dynamicMessage = dynamicMessage
                                 )
