@@ -185,7 +185,7 @@ class TelegramBotService(
     fun downloadFile(
         filePath: String,
         fileName: String
-    ) {
+    ): Boolean {
 
         val url =
             "$TELEGRAM_FILE_URL$botToken/$filePath"
@@ -202,7 +202,7 @@ class TelegramBotService(
                 .build()
 
 
-        try {
+        return try {
 
             val response: HttpResponse<InputStream> =
                 HttpClient
@@ -218,12 +218,25 @@ class TelegramBotService(
             )
 
 
-            response.body().use { input ->
+            if (response.statusCode() !in 200..299) {
 
-                input.copyTo(
+                response.body().close()
+
+                false
+
+            } else {
+
+                response.body().use { input ->
+
                     File(fileName)
                         .outputStream()
-                )
+                        .use { output ->
+
+                            input.copyTo(output)
+                        }
+                }
+
+                true
             }
 
 
@@ -232,6 +245,8 @@ class TelegramBotService(
             println(
                 "Ошибка скачивания файла: ${e.message}"
             )
+
+            false
         }
     }
 

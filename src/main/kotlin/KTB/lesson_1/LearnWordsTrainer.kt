@@ -151,7 +151,7 @@ class LearnWordsTrainer(
 
     fun addWordsFromFile(
         fileName: String
-    ) {
+    ): Boolean {
 
         val file =
             File(fileName)
@@ -162,32 +162,53 @@ class LearnWordsTrainer(
                 "Файл не найден: $fileName"
             )
 
-            return
+            return false
         }
 
         val newWords =
-            file.readLines()
-                .mapNotNull { line ->
+            try {
 
-                    val parts =
-                        line.split("|")
+                file.readLines()
+                    .mapNotNull { line ->
 
-                    if (
-                        parts.size >= 2 &&
-                        parts[0].isNotBlank() &&
-                        parts[1].isNotBlank()
-                    ) {
+                        val parts =
+                            line.split("|")
 
-                        Word(
-                            original = parts[0].trim(),
-                            translate = parts[1].trim()
-                        )
+                        if (
+                            parts.size >= 2 &&
+                            parts[0].isNotBlank() &&
+                            parts[1].isNotBlank()
+                        ) {
 
-                    } else {
+                            Word(
+                                original = parts[0].trim(),
+                                translate = parts[1].trim()
+                            )
 
-                        null
+                        } else {
+
+                            null
+                        }
                     }
-                }
+
+            } catch (e: Exception) {
+
+                println(
+                    "Ошибка чтения файла: ${e.message}"
+                )
+
+                return false
+            }
+
+
+        if (newWords.isEmpty()) {
+
+            println(
+                "В файле нет корректных слов"
+            )
+
+            return false
+        }
 
 
         var addedWordsCount = 0
@@ -230,6 +251,8 @@ class LearnWordsTrainer(
         println(
             "Добавлено новых слов: $addedWordsCount"
         )
+
+        return true
     }
 
 

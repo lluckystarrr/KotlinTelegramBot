@@ -39,12 +39,12 @@ data class TelegramMessage(
 
     val text: String? = null,
 
-    val document: TelegramDocument? = null
+    val document: Document? = null
 )
 
 
 @Serializable
-data class TelegramDocument(
+data class Document(
 
     @SerialName("file_id")
     val fileId: String,
@@ -74,7 +74,6 @@ data class TelegramCallbackQuery(
 )
 
 
-
 fun checkNextQuestionAndSend(
     trainer: LearnWordsTrainer,
     telegramBotService: TelegramBotService,
@@ -82,7 +81,6 @@ fun checkNextQuestionAndSend(
 ) {
 
     val question = trainer.getNextQuestion()
-
 
     if (question == null) {
 
@@ -101,23 +99,17 @@ fun checkNextQuestionAndSend(
 }
 
 
-
 fun main(args: Array<String>) {
-
 
     val botToken = args[0]
 
-
     var updateId = 0
-
 
     val telegramBotService =
         TelegramBotService(botToken)
 
-
     val trainers =
         HashMap<Long, LearnWordsTrainer>()
-
 
     val json =
         Json {
@@ -125,17 +117,12 @@ fun main(args: Array<String>) {
         }
 
 
-
     while (true) {
-
 
         Thread.sleep(2000)
 
-
         val updatesJson =
             telegramBotService.getUpdates(updateId)
-
-
 
         val updates = try {
 
@@ -153,58 +140,40 @@ fun main(args: Array<String>) {
         }
 
 
-
         for (update in updates.result) {
-
 
             updateId =
                 update.updateId + 1
 
-
-
             val callbackQuery =
                 update.callbackQuery
 
-
-
             if (callbackQuery != null) {
-
 
                 val callbackData =
                     callbackQuery.data
 
-
                 val chatId =
                     callbackQuery.message?.chat?.id
-
-
 
                 telegramBotService.answerCallbackQuery(
                     callbackQuery.id
                 )
-
-
 
                 if (
                     chatId != null &&
                     callbackData != null
                 ) {
 
-
                     val trainer =
                         trainers.getOrPut(chatId) {
-
                             LearnWordsTrainer(chatId)
                         }
 
-
-
                     when {
-
 
                         callbackData ==
                                 CALLBACK_LEARN_WORDS -> {
-
 
                             checkNextQuestionAndSend(
                                 trainer,
@@ -214,15 +183,11 @@ fun main(args: Array<String>) {
                         }
 
 
-
                         callbackData ==
                                 CALLBACK_STATISTICS -> {
 
-
                             val statistics =
                                 trainer.getStatistics()
-
-
 
                             telegramBotService.sendMessage(
                                 chatId.toString(),
@@ -234,14 +199,10 @@ fun main(args: Array<String>) {
                         }
 
 
-
                         callbackData ==
                                 CALLBACK_RESET_STATISTICS -> {
 
-
                             trainer.resetStatistics()
-
-
 
                             telegramBotService.sendMessage(
                                 chatId.toString(),
@@ -251,12 +212,9 @@ fun main(args: Array<String>) {
                         }
 
 
-
                         callbackData.startsWith(
                             CALLBACK_DATA_ANSWER_PREFIX
                         ) -> {
-
-
 
                             val userAnswerIndex =
                                 callbackData
@@ -265,22 +223,15 @@ fun main(args: Array<String>) {
                                     )
                                     .toInt()
 
-
-
                             val question =
                                 trainer.getCurrentQuestion()
-
-
 
                             val isCorrect =
                                 trainer.checkAnswer(
                                     userAnswerIndex
                                 )
 
-
-
                             if (isCorrect) {
-
 
                                 telegramBotService.sendMessage(
                                     chatId.toString(),
@@ -289,11 +240,8 @@ fun main(args: Array<String>) {
 
                             } else {
 
-
                                 val correctAnswer =
                                     question?.correctAnswer
-
-
 
                                 telegramBotService.sendMessage(
                                     chatId.toString(),
@@ -304,8 +252,6 @@ fun main(args: Array<String>) {
                                 )
                             }
 
-
-
                             checkNextQuestionAndSend(
                                 trainer,
                                 telegramBotService,
@@ -315,104 +261,121 @@ fun main(args: Array<String>) {
                     }
                 }
 
-
                 continue
             }
-
-
-
 
 
             val message =
                 update.message
 
-
-
             if (message != null) {
-
 
                 val chatId =
                     message.chat.id
 
-
-
                 val trainer =
                     trainers.getOrPut(chatId) {
-
                         LearnWordsTrainer(chatId)
                     }
 
 
-
-                // обработка файла
-
+                // Обработка файла
                 if (message.document != null) {
-
 
                     val fileId =
                         message.document.fileId
-
-
 
                     val fileJson =
                         telegramBotService.getFile(
                             fileId
                         )
 
-
-
                     val fileResponse =
-                        json.decodeFromString<GetFileResponse>(
-                            fileJson
-                        )
+                        try {
 
+                            json.decodeFromString<GetFileResponse>(
+                                fileJson
+                            )
+
+                        } catch (e: Exception) {
+
+                            println(
+                                "Ошибка при получении информации о файле: ${e.message}"
+                            )
+
+                            telegramBotService.sendMessage(
+                                chatId.toString(),
+                                "Не удалось получить информацию о файле."
+                            )
+
+                            continue
+                        }
 
 
                     val filePath =
                         fileResponse.result?.filePath
 
+                    if (filePath == null) {
+
+                        telegramBotService.sendMessage(
+                            chatId.toString(),
+                            "Не удалось получить путь к файлу."
+                        )
+
+                        continue
+                    }
 
 
-                    if (filePath != null) {
+                    val fileName =
+                        "download_$chatId.txt"
 
 
-                        val fileName =
-                            "download_$chatId.txt"
-
-
-
+                    val downloaded =
                         telegramBotService.downloadFile(
                             filePath,
                             fileName
                         )
 
 
+                    if (!downloaded) {
 
+                        telegramBotService.sendMessage(
+                            chatId.toString(),
+                            "Не удалось скачать файл."
+                        )
+
+                        continue
+                    }
+
+
+                    val wordsAdded =
                         trainer.addWordsFromFile(
                             fileName
                         )
 
 
+                    if (wordsAdded) {
 
                         telegramBotService.sendMessage(
                             chatId.toString(),
-
                             "Файл обработан. Слова добавлены!"
                         )
-                    }
 
+                    } else {
+
+                        telegramBotService.sendMessage(
+                            chatId.toString(),
+                            "Не удалось обработать файл."
+                        )
+                    }
 
                     continue
                 }
 
 
-
-
                 when (message.text) {
 
-
                     "/start" -> {
-
 
                         telegramBotService.sendMenu(
                             chatId.toString()
@@ -420,16 +383,12 @@ fun main(args: Array<String>) {
                     }
 
 
-
                     else -> {
-
 
                         if (message.text != null) {
 
-
                             telegramBotService.sendMessage(
                                 chatId.toString(),
-
                                 message.text
                             )
                         }
