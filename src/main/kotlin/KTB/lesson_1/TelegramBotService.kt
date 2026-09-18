@@ -73,7 +73,7 @@ data class EditMessageTextRequest(
     val text: String,
 
     @SerialName("reply_markup")
-val replyMarkup: InlineKeyboardMarkup? = null
+    val replyMarkup: InlineKeyboardMarkup? = null
 )
 
 
@@ -497,7 +497,8 @@ class TelegramBotService(
             EditMessageTextRequest(
                 chatId = chatId,
                 messageId = messageId,
-                text = message
+                text = message,
+                replyMarkup = replyMarkup
             )
 
 
@@ -897,11 +898,7 @@ class TelegramBotService(
                 .post(body)
                 .build()
 
-
-
         return try {
-
-
             client.newCall(request)
                 .execute()
                 .use { response ->
@@ -912,15 +909,11 @@ class TelegramBotService(
                 }
 
 
-
         } catch (e: Exception) {
-
 
             println(
                 "Ошибка при отправке запроса: ${e.message}"
             )
-
-
             ""
         }
     }

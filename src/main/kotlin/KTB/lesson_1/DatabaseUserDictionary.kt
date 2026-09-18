@@ -103,31 +103,57 @@ class DatabaseUserDictionary(
 
         return try {
             Database.getConnection().use { connection ->
+
                 connection.prepareStatement(
                     """
                     INSERT OR IGNORE INTO words (text, translate, image_path, image_file_id)
                     VALUES (?, ?, ?, ?)
                     """.trimIndent()
-                ).use { statement ->
-                    file.useLines { lines ->
-                        lines.forEach { line ->
-                            val parts = line.split("|")
+                ).use { wordStatement ->
 
-                            val original = parts.getOrNull(0)?.trim().orEmpty()
-                            val translate = parts.getOrNull(1)?.trim().orEmpty()
-                            val imagePath = parts.getOrNull(3)?.trim()?.takeIf { it.isNotBlank() }
-                            val imageFileId = parts.getOrNull(4)?.trim()?.takeIf { it.isNotBlank() }
+                    connection.prepareStatement(
+                        """
+                        INSERT OR IGNORE INTO user_answers
+                            (user_id, word_id, correct_answer_count, updated_at)
+                        SELECT ?, id, ?, CURRENT_TIMESTAMP
+                        FROM words
+                        WHERE text = ?
+                        """.trimIndent()
+                    ).use { answerStatement ->
 
-                            if (original.isNotBlank() && translate.isNotBlank()) {
-                                statement.setString(1, original)
-                                statement.setString(2, translate)
-                                statement.setString(3, imagePath)
-                                statement.setString(4, imageFileId)
-                                statement.addBatch()
+                        file.useLines { lines ->
+                            lines.forEach { line ->
+                                val parts = line.split("|")
+
+                                val original = parts.getOrNull(0)?.trim().orEmpty()
+                                val translate = parts.getOrNull(1)?.trim().orEmpty()
+                                val count = parts.getOrNull(2)?.trim()?.toIntOrNull() ?: 0
+                                val imagePath = parts.getOrNull(3)?.trim()?.takeIf { it.isNotBlank() }
+                                val imageFileId = parts.getOrNull(4)?.trim()?.takeIf { it.isNotBlank() }
+
+                                if (original.isNotBlank() && translate.isNotBlank()) {
+
+                                    wordStatement.setString(1, original)
+                                    wordStatement.setString(2, translate)
+                                    wordStatement.setString(3, imagePath)
+                                    wordStatement.setString(4, imageFileId)
+                                    wordStatement.addBatch()
+
+                                    // счётчик сохраняем только если > 0,
+                                    // чтобы не плодить пустые записи
+                                    if (count > 0) {
+                                        answerStatement.setLong(1, userId)
+                                        answerStatement.setInt(2, count)
+                                        answerStatement.setString(3, original)
+                                        answerStatement.addBatch()
+                                    }
+                                }
                             }
                         }
+
+                        wordStatement.executeBatch()
+                        answerStatement.executeBatch()
                     }
-                    statement.executeBatch()
                 }
             }
             true
@@ -214,6 +240,7 @@ class DatabaseUserDictionary(
                 statement.executeUpdate()
             }
 
+            // 3. Возвращаем id созданного
             connection.prepareStatement(
                 "SELECT id FROM users WHERE chat_id = ?"
             ).use { statement ->
