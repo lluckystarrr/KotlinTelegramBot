@@ -113,18 +113,34 @@ fun updateDictionary(wordsFile: File) {
                 lines.forEach { line ->
                     val parts = line.split("|")
 
-                    val text = parts.getOrNull(0)?.trim().orEmpty()
-                    val translate = parts.getOrNull(1)?.trim().orEmpty()
+                    val rawText = parts.getOrNull(0)?.trim().orEmpty()
+                    val rawTranslate = parts.getOrNull(1)?.trim().orEmpty()
                     val imagePath = parts.getOrNull(3)?.trim()?.takeIf { it.isNotBlank() }
                     val imageFileId = parts.getOrNull(4)?.trim()?.takeIf { it.isNotBlank() }
 
-                    if (text.isNotBlank() && translate.isNotBlank()) {
-                        statement.setString(1, text)
-                        statement.setString(2, translate)
-                        statement.setString(3, imagePath)
-                        statement.setString(4, imageFileId)
-                        statement.addBatch()
+                    if (rawText.isBlank() || rawTranslate.isBlank()) {
+                        return@forEach
                     }
+
+                    val text = try {
+                        validateWordInput("word.text", rawText)
+                    } catch (e: IllegalArgumentException) {
+                        println("Пропущено слово: ${e.message}")
+                        return@forEach
+                    }
+
+                    val translate = try {
+                        validateWordInput("word.translate", rawTranslate)
+                    } catch (e: IllegalArgumentException) {
+                        println("Пропущен перевод: ${e.message}")
+                        return@forEach
+                    }
+
+                    statement.setString(1, text)
+                    statement.setString(2, translate)
+                    statement.setString(3, imagePath)
+                    statement.setString(4, imageFileId)
+                    statement.addBatch()
                 }
             }
 

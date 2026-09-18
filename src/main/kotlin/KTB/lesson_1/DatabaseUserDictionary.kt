@@ -139,26 +139,41 @@ class DatabaseUserDictionary(
                             lines.forEach { line ->
                                 val parts = line.split("|")
 
-                                val original = parts.getOrNull(0)?.trim().orEmpty()
-                                val translate = parts.getOrNull(1)?.trim().orEmpty()
+                                val rawOriginal = parts.getOrNull(0)?.trim().orEmpty()
+                                val rawTranslate = parts.getOrNull(1)?.trim().orEmpty()
                                 val count = parts.getOrNull(2)?.trim()?.toIntOrNull() ?: 0
                                 val imagePath = parts.getOrNull(3)?.trim()?.takeIf { it.isNotBlank() }
                                 val imageFileId = parts.getOrNull(4)?.trim()?.takeIf { it.isNotBlank() }
 
-                                if (original.isNotBlank() && translate.isNotBlank()) {
+                                if (rawOriginal.isBlank() || rawTranslate.isBlank()) {
+                                    return@forEach
+                                }
 
-                                    wordStatement.setString(1, original)
-                                    wordStatement.setString(2, translate)
-                                    wordStatement.setString(3, imagePath)
-                                    wordStatement.setString(4, imageFileId)
-                                    wordStatement.addBatch()
+                                val original = try {
+                                    validateWordInput("word.text", rawOriginal)
+                                } catch (e: IllegalArgumentException) {
+                                    println("Пропущено слово: ${e.message}")
+                                    return@forEach
+                                }
 
-                                    if (count > 0) {
-                                        answerStatement.setLong(1, userId)
-                                        answerStatement.setInt(2, count)
-                                        answerStatement.setString(3, original)
-                                        answerStatement.addBatch()
-                                    }
+                                val translate = try {
+                                    validateWordInput("word.translate", rawTranslate)
+                                } catch (e: IllegalArgumentException) {
+                                    println("Пропущен перевод: ${e.message}")
+                                    return@forEach
+                                }
+
+                                wordStatement.setString(1, original)
+                                wordStatement.setString(2, translate)
+                                wordStatement.setString(3, imagePath)
+                                wordStatement.setString(4, imageFileId)
+                                wordStatement.addBatch()
+
+                                if (count > 0) {
+                                    answerStatement.setLong(1, userId)
+                                    answerStatement.setInt(2, count)
+                                    answerStatement.setString(3, original)
+                                    answerStatement.addBatch()
                                 }
                             }
                         }
