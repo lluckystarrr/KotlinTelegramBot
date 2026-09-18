@@ -3,6 +3,7 @@ package org.example.KTB.lesson_1
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import java.io.File
 
 const val TELEGRAM_API_BASE = "https://api.telegram.org/bot"
 
@@ -60,29 +61,19 @@ fun createStatisticsMessage(
     trainer: LearnWordsTrainer
 ): String {
 
-    val statistics =
-        trainer.getStatistics()
+    val statistics = trainer.getStatistics()
+    val learnedCount = statistics.learnedCount
+    val totalCount = statistics.totalCount
 
-    val learnedCount =
-        statistics.learnedCount
-
-    val totalCount =
-        statistics.totalCount
-
-    val percent =
-        if (totalCount == 0) {
-            0
-        } else {
-            learnedCount * 100 / totalCount
-        }
+    val percent = if (totalCount == 0) {
+        0
+    } else {
+        learnedCount * 100 / totalCount
+    }
 
     val progressBarSize = 10
-
-    val filledCount =
-        percent * progressBarSize / 100
-
-    val emptyCount =
-        progressBarSize - filledCount
+    val filledCount = percent * progressBarSize / 100
+    val emptyCount = progressBarSize - filledCount
 
     val progressBar =
         "█".repeat(filledCount) +
@@ -100,13 +91,11 @@ fun sendAndSaveMessage(
     dynamicMessage: DynamicMessage,
     replyMarkup: InlineKeyboardMarkup? = null
 ) {
-
-    val messageId =
-        telegramBotService.sendMessage(
-            chatId = chatId.toString(),
-            text = message,
-            replyMarkup = replyMarkup
-        )
+    val messageId = telegramBotService.sendMessage(
+        chatId = chatId.toString(),
+        text = message,
+        replyMarkup = replyMarkup
+    )
 
     messageId?.let {
         dynamicMessage.setMessageId(it)
@@ -124,42 +113,32 @@ fun updateStatisticsMessage(
     telegramBotService: TelegramBotService,
     dynamicMessage: DynamicMessage
 ) {
-
-    val message =
-        createStatisticsMessage(trainer)
-
-    val messageId =
-        dynamicMessage.messageId
+    val message = createStatisticsMessage(trainer)
+    val messageId = dynamicMessage.messageId
 
     if (messageId == null) {
-
         sendAndSaveMessage(
             chatId = chatId,
             message = message,
             telegramBotService = telegramBotService,
             dynamicMessage = dynamicMessage
         )
-
         return
     }
 
-
-    val edited =
-        telegramBotService.editMessage(
-            chatId = chatId,
-            messageId = messageId,
-            message = message,
-            replyMarkup = null
-        )
+    val edited = telegramBotService.editMessage(
+        chatId = chatId,
+        messageId = messageId,
+        message = message,
+        replyMarkup = null
+    )
 
     if (edited) {
-
         dynamicMessage.addMessage(
-                text = message,
-            replyMarkup = null)
-
+            text = message,
+            replyMarkup = null
+        )
     } else {
-
         sendAndSaveMessage(
             chatId = chatId,
             message = message,
@@ -176,46 +155,31 @@ fun checkNextQuestionAndSend(
     chatId: Long,
     dynamicMessage: DynamicMessage
 ) {
-
-    val question =
-        trainer.getNextQuestion()
-
+    val question = trainer.getNextQuestion()
 
     if (question == null) {
-
         sendAndSaveMessage(
             chatId = chatId,
             message = "Все слова в словаре выучены",
             telegramBotService = telegramBotService,
             dynamicMessage = dynamicMessage
         )
-
         return
     }
 
-
-    val correctAnswer =
-        question.correctAnswer
-
+    val correctAnswer = question.correctAnswer
 
     correctAnswer.imageFileId?.let { fileId ->
-
         telegramBotService.sendPhotoByFileId(
             chatId = chatId.toString(),
             fileId = fileId
         )
-
     } ?: correctAnswer.imagePath?.let { imagePath ->
-
-        val fileId =
-            telegramBotService.sendPhoto(
-                chatId = chatId.toString(),
-                imagePath = imagePath
-            )
-
-
+        val fileId = telegramBotService.sendPhoto(
+            chatId = chatId.toString(),
+            imagePath = imagePath
+        )
         fileId?.let {
-
             trainer.saveImageFileId(
                 word = correctAnswer,
                 fileId = it
@@ -223,13 +187,10 @@ fun checkNextQuestionAndSend(
         }
     }
 
-
-    val messageId =
-        telegramBotService.sendQuestion(
-            chatId = chatId.toString(),
-            question = question
-        )
-
+    val messageId = telegramBotService.sendQuestion(
+        chatId = chatId.toString(),
+        question = question
+    )
 
     messageId?.let {
         dynamicMessage.setMessageId(it)
@@ -239,121 +200,66 @@ fun checkNextQuestionAndSend(
     }
 }
 
+
 fun main(args: Array<String>) {
 
-    val botToken =
-        args[0]
+    val botToken = args[0]
 
+    val wordsFile = File("words.txt")
+    if (wordsFile.exists()) {
+        updateDictionary(wordsFile)
+    }
 
     var updateId = 0
 
+    val telegramBotService = TelegramBotService(botToken)
+    val trainers = HashMap<Long, LearnWordsTrainer>()
+    val dynamicMessages = HashMap<Long, DynamicMessage>()
 
-    val telegramBotService =
-        TelegramBotService(botToken)
-
-
-    val trainers =
-        HashMap<Long, LearnWordsTrainer>()
-
-
-    val dynamicMessages =
-        HashMap<Long, DynamicMessage>()
-
-
-    val json =
-        Json {
-            ignoreUnknownKeys = true
-        }
-
+    val json = Json {
+        ignoreUnknownKeys = true
+    }
 
     while (true) {
 
         Thread.sleep(2000)
 
+        val updatesJson = telegramBotService.getUpdates(updateId)
 
-        val updatesJson =
-            telegramBotService.getUpdates(
-                updateId
-            )
-
-
-        val updates =
-            try {
-
-                json.decodeFromString<TelegramResponse>(
-                    updatesJson
-                )
-
-            } catch (e: Exception) {
-
-                println(
-                    "Ошибка при обработке JSON: ${e.message}"
-                )
-
-                continue
-            }
-
-
+        val updates = try {
+            json.decodeFromString<TelegramResponse>(updatesJson)
+        } catch (e: Exception) {
+            println("Ошибка при обработке JSON: ${e.message}")
+            continue
+        }
 
         for (update in updates.result) {
 
-            updateId =
-                update.updateId + 1
+            updateId = update.updateId + 1
 
-
-            val callbackQuery =
-                update.callbackQuery
-
-
+            val callbackQuery = update.callbackQuery
 
             if (callbackQuery != null) {
 
+                val callbackData = callbackQuery.data
+                val chatId = callbackQuery.message?.chat?.id
 
-                val callbackData =
-                    callbackQuery.data
+                telegramBotService.answerCallbackQuery(callbackQuery.id)
 
+                if (chatId != null && callbackData != null) {
 
-                val chatId =
-                    callbackQuery.message
-                        ?.chat
-                        ?.id
+                    val trainer = trainers.getOrPut(chatId) {
+                        // chatId != null → внутри LearnWordsTrainer создастся DatabaseUserDictionary
+                        LearnWordsTrainer(chatId)
+                    }
 
-
-
-                telegramBotService.answerCallbackQuery(
-                    callbackQuery.id
-                )
-
-
-
-                if (
-                    chatId != null &&
-                    callbackData != null
-                ) {
-
-
-                    val trainer =
-                        trainers.getOrPut(chatId) {
-
-                            LearnWordsTrainer(chatId)
-                        }
-
-
-                    val dynamicMessage =
-                        dynamicMessages.getOrPut(chatId) {
-
-                            DynamicMessage()
-                        }
-
-
+                    val dynamicMessage = dynamicMessages.getOrPut(chatId) {
+                        DynamicMessage()
+                    }
 
                     when {
 
-
-                        callbackData ==
-                                CALLBACK_LEARN_WORDS -> {
-
-
+                        callbackData == CALLBACK_LEARN_WORDS -> {
                             checkNextQuestionAndSend(
                                 trainer = trainer,
                                 telegramBotService = telegramBotService,
@@ -362,30 +268,17 @@ fun main(args: Array<String>) {
                             )
                         }
 
-
-                        callbackData ==
-                                CALLBACK_STATISTICS -> {
-
-
+                        callbackData == CALLBACK_STATISTICS -> {
                             sendAndSaveMessage(
                                 chatId = chatId,
-                                message = createStatisticsMessage(
-                                    trainer
-                                ),
+                                message = createStatisticsMessage(trainer),
                                 telegramBotService = telegramBotService,
                                 dynamicMessage = dynamicMessage
                             )
                         }
 
-
-                        callbackData ==
-                                CALLBACK_RESET_STATISTICS -> {
-
-
+                        callbackData == CALLBACK_RESET_STATISTICS -> {
                             trainer.resetStatistics()
-
-
-
                             updateStatisticsMessage(
                                 chatId = chatId,
                                 trainer = trainer,
@@ -394,34 +287,16 @@ fun main(args: Array<String>) {
                             )
                         }
 
+                        callbackData.startsWith(CALLBACK_DATA_ANSWER_PREFIX) -> {
 
-                        callbackData.startsWith(
-                            CALLBACK_DATA_ANSWER_PREFIX
-                        ) -> {
+                            val userAnswerIndex = callbackData
+                                .substringAfter(CALLBACK_DATA_ANSWER_PREFIX)
+                                .toInt()
 
-
-                            val userAnswerIndex =
-                                callbackData
-                                    .substringAfter(
-                                        CALLBACK_DATA_ANSWER_PREFIX
-                                    )
-                                    .toInt()
-
-
-                            val question =
-                                trainer.getCurrentQuestion()
-
-
-                            val isCorrect =
-                                trainer.checkAnswer(
-                                    userAnswerIndex
-                                )
-
-
+                            val question = trainer.getCurrentQuestion()
+                            val isCorrect = trainer.checkAnswer(userAnswerIndex)
 
                             if (isCorrect) {
-
-
                                 sendAndSaveMessage(
                                     chatId = chatId,
                                     message = "Правильно!",
@@ -429,23 +304,14 @@ fun main(args: Array<String>) {
                                     dynamicMessage = dynamicMessage
                                 )
 
-
-
                                 updateStatisticsMessage(
                                     chatId = chatId,
                                     trainer = trainer,
                                     telegramBotService = telegramBotService,
                                     dynamicMessage = dynamicMessage
                                 )
-
-
                             } else {
-
-
-                                val correctAnswer =
-                                    question?.correctAnswer
-
-
+                                val correctAnswer = question?.correctAnswer
 
                                 sendAndSaveMessage(
                                     chatId = chatId,
@@ -458,8 +324,6 @@ fun main(args: Array<String>) {
                                 )
                             }
 
-
-
                             checkNextQuestionAndSend(
                                 trainer = trainer,
                                 telegramBotService = telegramBotService,
@@ -470,130 +334,81 @@ fun main(args: Array<String>) {
                     }
                 }
 
-
                 continue
             }
 
-
-            val message =
-                update.message
-
-
+            val message = update.message
 
             if (message != null) {
 
+                val chatId = message.chat.id
 
-                val chatId =
-                    message.chat.id
+                val trainer = trainers.getOrPut(chatId) {
+                    LearnWordsTrainer(chatId)
+                }
 
-
-                val trainer =
-                    trainers.getOrPut(chatId) {
-
-                        LearnWordsTrainer(chatId)
-                    }
-
-
-                val dynamicMessage =
-                    dynamicMessages.getOrPut(chatId) {
-
-                        DynamicMessage()
-                    }
-
-
+                val dynamicMessage = dynamicMessages.getOrPut(chatId) {
+                    DynamicMessage()
+                }
 
                 if (message.document != null) {
 
+                    val fileId = message.document.fileId
+                    val fileJson = telegramBotService.getFile(fileId)
 
-                    val fileId =
-                        message.document.fileId
-
-
-                    val fileJson =
-                        telegramBotService.getFile(
-                            fileId
+                    val fileResponse = try {
+                        json.decodeFromString<GetFileResponse>(fileJson)
+                    } catch (e: Exception) {
+                        sendAndSaveMessage(
+                            chatId = chatId,
+                            message = "Не удалось получить информацию о файле.",
+                            telegramBotService = telegramBotService,
+                            dynamicMessage = dynamicMessage
                         )
+                        continue
+                    }
 
-
-                    val fileResponse =
-                        try {
-
-                            json.decodeFromString<GetFileResponse>(
-                                fileJson
-                            )
-
-                        } catch (e: Exception) {
-
-                            sendAndSaveMessage(
-                                chatId = chatId,
-                                message = "Не удалось получить информацию о файле.",
-                                telegramBotService = telegramBotService,
-                                dynamicMessage = dynamicMessage
-                            )
-
-                            continue
-                        }
-
-
-                    val filePath =
-                        fileResponse.result?.filePath
-
-
+                    val filePath = fileResponse.result?.filePath
 
                     if (filePath == null) {
-
-
                         sendAndSaveMessage(
                             chatId = chatId,
                             message = "Не удалось получить путь к файлу.",
                             telegramBotService = telegramBotService,
                             dynamicMessage = dynamicMessage
                         )
-
                         continue
                     }
-                    val fileName =
-                        "download_${message.document.fileUniqueId}.txt"
 
+                    val fileName = "download_${message.document.fileUniqueId}.txt"
 
-                    val downloaded =
-                        telegramBotService.downloadFile(
-                            filePath,
-                            fileName
-                        )
-
+                    val downloaded = telegramBotService.downloadFile(
+                        filePath,
+                        fileName
+                    )
 
                     if (!downloaded) {
-
                         sendAndSaveMessage(
                             chatId = chatId,
                             message = "Не удалось скачать файл.",
                             telegramBotService = telegramBotService,
                             dynamicMessage = dynamicMessage
                         )
-
                         continue
                     }
 
+                    val wordsAdded = trainer.addWordsFromFile(fileName)
 
-                    val wordsAdded =
-                        trainer.addWordsFromFile(
-                            fileName
-                        )
-
-
+                    File(fileName).delete()
 
                     if (wordsAdded) {
-
                         sendAndSaveMessage(
                             chatId = chatId,
                             message = "Файл обработан. Слова добавлены!",
                             telegramBotService = telegramBotService,
                             dynamicMessage = dynamicMessage
                         )
-
                     } else {
-
                         sendAndSaveMessage(
                             chatId = chatId,
                             message = "Не удалось обработать файл.",
@@ -602,62 +417,32 @@ fun main(args: Array<String>) {
                         )
                     }
 
-
                     continue
                 }
 
-
-
                 when (message.text) {
 
-
                     "/start" -> {
-                        val messageId =
-                            telegramBotService.sendMenu(
-                                chatId.toString()
-                            )
-
+                        val messageId = telegramBotService.sendMenu(chatId.toString())
                         messageId?.let {
-
                             dynamicMessage.setMessageId(it)
-
-                            dynamicMessage.addMessage(
-                                "Главное меню:"
-                            )
+                            dynamicMessage.addMessage("Главное меню:")
                         }
                     }
 
                     "/undo" -> {
+                        val messageId = dynamicMessage.messageId
+                        val previousMessage = dynamicMessage.getPreviousMessage()
 
-
-                        val messageId =
-                            dynamicMessage.messageId
-
-
-                        val previousMessage =
-                            dynamicMessage.getPreviousMessage()
-
-
-
-                        if (
-                            messageId != null &&
-                            previousMessage != null
-                        ) {
-
-
-                            val edited =
-                                telegramBotService.editMessage(
-                                    chatId = chatId,
-                                    messageId = messageId,
-                                    message = previousMessage.text,
-                                    replyMarkup = previousMessage.replyMarkup
-                                )
-
-
+                        if (messageId != null && previousMessage != null) {
+                            val edited = telegramBotService.editMessage(
+                                chatId = chatId,
+                                messageId = messageId,
+                                message = previousMessage.text,
+                                replyMarkup = previousMessage.replyMarkup
+                            )
 
                             if (!edited) {
-
-
                                 sendAndSaveMessage(
                                     chatId = chatId,
                                     message = previousMessage.text,
@@ -665,11 +450,7 @@ fun main(args: Array<String>) {
                                     dynamicMessage = dynamicMessage
                                 )
                             }
-
-
                         } else {
-
-
                             sendAndSaveMessage(
                                 chatId = chatId,
                                 message = "Нет предыдущего сообщения для отмены.",
@@ -679,13 +460,8 @@ fun main(args: Array<String>) {
                         }
                     }
 
-
                     else -> {
-
-
                         message.text?.let {
-
-
                             sendAndSaveMessage(
                                 chatId = chatId,
                                 message = it,
