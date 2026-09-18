@@ -47,26 +47,45 @@ class FileUserDictionary(
 
             file.readLines().forEach { line ->
                 val parts = line.split("|")
-                val original = parts.getOrNull(0)?.trim().orEmpty()
-                val translate = parts.getOrNull(1)?.trim().orEmpty()
 
-                if (original.isNotBlank() && translate.isNotBlank()) {
-                    val exists = dictionary.any {
-                        it.original.equals(original, ignoreCase = true) &&
-                                it.translate.equals(translate, ignoreCase = true)
-                    }
+                val rawOriginal = parts.getOrNull(0)?.trim().orEmpty()
+                val rawTranslate = parts.getOrNull(1)?.trim().orEmpty()
+                val imagePath = parts.getOrNull(3)?.trim()?.takeIf { it.isNotBlank() }
+                val imageFileId = parts.getOrNull(4)?.trim()?.takeIf { it.isNotBlank() }
 
-                    if (!exists) {
-                        dictionary.add(
-                            Word(
-                                original = original,
-                                translate = translate,
-                                imagePath = parts.getOrNull(3)?.trim()?.takeIf { it.isNotBlank() },
-                                imageFileId = parts.getOrNull(4)?.trim()?.takeIf { it.isNotBlank() }
-                            )
+                if (rawOriginal.isBlank() || rawTranslate.isBlank()) {
+                    return@forEach
+                }
+
+                val original = try {
+                    validateWordInput("word.text", rawOriginal)
+                } catch (e: IllegalArgumentException) {
+                    println("Пропущено слово: ${e.message}")
+                    return@forEach
+                }
+
+                val translate = try {
+                    validateWordInput("word.translate", rawTranslate)
+                } catch (e: IllegalArgumentException) {
+                    println("Пропущен перевод: ${e.message}")
+                    return@forEach
+                }
+
+                val exists = dictionary.any {
+                    it.original.equals(original, ignoreCase = true) &&
+                            it.translate.equals(translate, ignoreCase = true)
+                }
+
+                if (!exists) {
+                    dictionary.add(
+                        Word(
+                            original = original,
+                            translate = translate,
+                            imagePath = imagePath,
+                            imageFileId = imageFileId
                         )
-                        addedWordsCount++
-                    }
+                    )
+                    addedWordsCount++
                 }
             }
 
