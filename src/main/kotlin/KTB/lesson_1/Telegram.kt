@@ -187,15 +187,20 @@ fun checkNextQuestionAndSend(
         }
     }
 
-    val messageId = telegramBotService.sendQuestion(
+    val messageText = "Как переводится слово «${question.correctAnswer.original}»?"
+    val replyMarkup = telegramBotService.buildQuestionMarkup(question)
+
+    val messageId = telegramBotService.sendMessage(
         chatId = chatId.toString(),
-        question = question
+        text = messageText,
+        replyMarkup = replyMarkup
     )
 
     messageId?.let {
         dynamicMessage.setMessageId(it)
         dynamicMessage.addMessage(
-            "Как переводится слово «${question.correctAnswer.original}»?"
+            text = messageText,
+            replyMarkup = replyMarkup
         )
     }
 }
@@ -249,7 +254,6 @@ fun main(args: Array<String>) {
                 if (chatId != null && callbackData != null) {
 
                     val trainer = trainers.getOrPut(chatId) {
-                        // chatId != null → внутри LearnWordsTrainer создастся DatabaseUserDictionary
                         LearnWordsTrainer(chatId)
                     }
 
@@ -423,10 +427,20 @@ fun main(args: Array<String>) {
                 when (message.text) {
 
                     "/start" -> {
-                        val messageId = telegramBotService.sendMenu(chatId.toString())
+                        val replyMarkup = telegramBotService.buildMainMenuMarkup()
+
+                        val messageId = telegramBotService.sendMessage(
+                            chatId = chatId.toString(),
+                            text = "Главное меню:",
+                            replyMarkup = replyMarkup
+                        )
+
                         messageId?.let {
                             dynamicMessage.setMessageId(it)
-                            dynamicMessage.addMessage("Главное меню:")
+                            dynamicMessage.addMessage(
+                                text = "Главное меню:",
+                                replyMarkup = replyMarkup
+                            )
                         }
                     }
 
@@ -435,6 +449,7 @@ fun main(args: Array<String>) {
                         val previousMessage = dynamicMessage.getPreviousMessage()
 
                         if (messageId != null && previousMessage != null) {
+
                             val edited = telegramBotService.editMessage(
                                 chatId = chatId,
                                 messageId = messageId,
@@ -447,7 +462,8 @@ fun main(args: Array<String>) {
                                     chatId = chatId,
                                     message = previousMessage.text,
                                     telegramBotService = telegramBotService,
-                                    dynamicMessage = dynamicMessage
+                                    dynamicMessage = dynamicMessage,
+                                    replyMarkup = previousMessage.replyMarkup
                                 )
                             }
                         } else {

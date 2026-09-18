@@ -12,7 +12,6 @@ class DynamicMessage {
     private val messageHistory =
         mutableListOf<SavedMessage>()
 
-
     fun addMessage(
         text: String,
         replyMarkup: InlineKeyboardMarkup? = null

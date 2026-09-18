@@ -106,18 +106,28 @@ class DatabaseUserDictionary(
 
                 connection.prepareStatement(
                     """
-                    INSERT OR IGNORE INTO words (text, translate, image_path, image_file_id)
+                    INSERT INTO words (text, translate, image_path, image_file_id)
                     VALUES (?, ?, ?, ?)
+                    ON CONFLICT(text) DO UPDATE SET
+                        translate = excluded.translate,
+                        image_path = COALESCE(excluded.image_path, words.image_path),
+                        image_file_id = COALESCE(excluded.image_file_id, words.image_file_id)
                     """.trimIndent()
                 ).use { wordStatement ->
 
                     connection.prepareStatement(
                         """
-                        INSERT OR IGNORE INTO user_answers
+                        INSERT INTO user_answers
                             (user_id, word_id, correct_answer_count, updated_at)
                         SELECT ?, id, ?, CURRENT_TIMESTAMP
                         FROM words
                         WHERE text = ?
+                        ON CONFLICT(user_id, word_id) DO UPDATE SET
+                            correct_answer_count = MAX(
+                                excluded.correct_answer_count,
+                                user_answers.correct_answer_count
+                            ),
+                            updated_at = CURRENT_TIMESTAMP
                         """.trimIndent()
                     ).use { answerStatement ->
 
@@ -139,8 +149,6 @@ class DatabaseUserDictionary(
                                     wordStatement.setString(4, imageFileId)
                                     wordStatement.addBatch()
 
-                                    // счётчик сохраняем только если > 0,
-                                    // чтобы не плодить пустые записи
                                     if (count > 0) {
                                         answerStatement.setLong(1, userId)
                                         answerStatement.setInt(2, count)
@@ -240,7 +248,6 @@ class DatabaseUserDictionary(
                 statement.executeUpdate()
             }
 
-            // 3. Возвращаем id созданного
             connection.prepareStatement(
                 "SELECT id FROM users WHERE chat_id = ?"
             ).use { statement ->
