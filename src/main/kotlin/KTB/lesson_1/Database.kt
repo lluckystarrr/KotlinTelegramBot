@@ -11,6 +11,7 @@ object Database {
     init {
         Class.forName("org.sqlite.JDBC")
         createTables()
+        migrateSchema()
     }
 
     fun getConnection(): Connection {
@@ -25,7 +26,9 @@ object Database {
                     CREATE TABLE IF NOT EXISTS words (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
                         text VARCHAR NOT NULL UNIQUE,
-                        translate VARCHAR NOT NULL
+                        translate VARCHAR NOT NULL,
+                        image_path VARCHAR,
+                        image_file_id VARCHAR
                     )
                     """.trimIndent()
                 )
@@ -57,6 +60,36 @@ object Database {
             }
         }
     }
+
+    private fun migrateSchema() {
+        getConnection().use { connection ->
+            val existingColumns = mutableSetOf<String>()
+
+            connection.createStatement().use { statement ->
+                statement.executeQuery("PRAGMA table_info(words)").use { rs ->
+                    while (rs.next()) {
+                        existingColumns.add(rs.getString("name"))
+                    }
+                }
+            }
+
+            if ("image_path" !in existingColumns) {
+                connection.createStatement().use { statement ->
+                    statement.executeUpdate(
+                        "ALTER TABLE words ADD COLUMN image_path VARCHAR"
+                    )
+                }
+            }
+
+            if ("image_file_id" !in existingColumns) {
+                connection.createStatement().use { statement ->
+                    statement.executeUpdate(
+                        "ALTER TABLE words ADD COLUMN image_file_id VARCHAR"
+                    )
+                }
+            }
+        }
+    }
 }
 
 fun updateDictionary(wordsFile: File) {
@@ -67,8 +100,8 @@ fun updateDictionary(wordsFile: File) {
     Database.getConnection().use { connection ->
         connection.prepareStatement(
             """
-            INSERT OR IGNORE INTO words (text, translate)
-            VALUES (?, ?)
+            INSERT OR IGNORE INTO words (text, translate, image_path, image_file_id)
+            VALUES (?, ?, ?, ?)
             """.trimIndent()
         ).use { statement ->
 
@@ -76,19 +109,16 @@ fun updateDictionary(wordsFile: File) {
                 lines.forEach { line ->
                     val parts = line.split("|")
 
-                    val text = parts
-                        .getOrNull(0)
-                        ?.trim()
-                        .orEmpty()
-
-                    val translate = parts
-                        .getOrNull(1)
-                        ?.trim()
-                        .orEmpty()
+                    val text = parts.getOrNull(0)?.trim().orEmpty()
+                    val translate = parts.getOrNull(1)?.trim().orEmpty()
+                    val imagePath = parts.getOrNull(3)?.trim()?.takeIf { it.isNotBlank() }
+                    val imageFileId = parts.getOrNull(4)?.trim()?.takeIf { it.isNotBlank() }
 
                     if (text.isNotBlank() && translate.isNotBlank()) {
                         statement.setString(1, text)
                         statement.setString(2, translate)
+                        statement.setString(3, imagePath)
+                        statement.setString(4, imageFileId)
                         statement.addBatch()
                     }
                 }

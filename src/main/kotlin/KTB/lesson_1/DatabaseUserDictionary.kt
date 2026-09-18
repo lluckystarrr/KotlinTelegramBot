@@ -10,7 +10,22 @@ class DatabaseUserDictionary(
     private val userId: Long = getOrCreateUserId()
 
     override fun getNumOfLearnedWords(): Int {
-        return getLearnedWords().size
+        Database.getConnection().use { connection ->
+            connection.prepareStatement(
+                """
+                SELECT COUNT(*)
+                FROM user_answers
+                WHERE user_id = ? AND correct_answer_count >= ?
+                """.trimIndent()
+            ).use { statement ->
+                statement.setLong(1, userId)
+                statement.setInt(2, answersCountToLearn)
+
+                statement.executeQuery().use { resultSet ->
+                    return if (resultSet.next()) resultSet.getInt(1) else 0
+                }
+            }
+        }
     }
 
     override fun getSize(): Int {
@@ -37,7 +52,6 @@ class DatabaseUserDictionary(
 
     override fun setCorrectAnswersCount(word: String, correctAnswersCount: Int) {
         Database.getConnection().use { connection ->
-
             val wordId: Long? = connection.prepareStatement(
                 "SELECT id FROM words WHERE text = ?"
             ).use { statement ->
@@ -90,16 +104,25 @@ class DatabaseUserDictionary(
         return try {
             Database.getConnection().use { connection ->
                 connection.prepareStatement(
-                    "INSERT OR IGNORE INTO words (text, translate) VALUES (?, ?)"
+                    """
+                    INSERT OR IGNORE INTO words (text, translate, image_path, image_file_id)
+                    VALUES (?, ?, ?, ?)
+                    """.trimIndent()
                 ).use { statement ->
                     file.useLines { lines ->
                         lines.forEach { line ->
                             val parts = line.split("|")
+
                             val original = parts.getOrNull(0)?.trim().orEmpty()
                             val translate = parts.getOrNull(1)?.trim().orEmpty()
+                            val imagePath = parts.getOrNull(3)?.trim()?.takeIf { it.isNotBlank() }
+                            val imageFileId = parts.getOrNull(4)?.trim()?.takeIf { it.isNotBlank() }
+
                             if (original.isNotBlank() && translate.isNotBlank()) {
                                 statement.setString(1, original)
                                 statement.setString(2, translate)
+                                statement.setString(3, imagePath)
+                                statement.setString(4, imageFileId)
                                 statement.addBatch()
                             }
                         }
@@ -115,7 +138,19 @@ class DatabaseUserDictionary(
     }
 
     override fun saveImageFileId(word: Word, fileId: String) {
-        println("Получен file_id для слова: ${word.original}: $fileId")
+        Database.getConnection().use { connection ->
+            connection.prepareStatement(
+                """
+                UPDATE words
+                SET image_file_id = ?
+                WHERE text = ?
+                """.trimIndent()
+            ).use { statement ->
+                statement.setString(1, fileId)
+                statement.setString(2, word.original)
+                statement.executeUpdate()
+            }
+        }
     }
 
     private fun getWords(
@@ -127,7 +162,10 @@ class DatabaseUserDictionary(
         Database.getConnection().use { connection ->
             connection.prepareStatement(
                 """
-                SELECT w.text, w.translate, COALESCE(ua.correct_answer_count, 0)
+                SELECT w.text, w.translate,
+                       COALESCE(ua.correct_answer_count, 0),
+                       w.image_path,
+                       w.image_file_id
                 FROM words w
                 LEFT JOIN user_answers ua
                     ON ua.word_id = w.id AND ua.user_id = ?
@@ -144,7 +182,9 @@ class DatabaseUserDictionary(
                             Word(
                                 original = resultSet.getString(1),
                                 translate = resultSet.getString(2),
-                                correctAnswersCount = resultSet.getInt(3)
+                                correctAnswersCount = resultSet.getInt(3),
+                                imagePath = resultSet.getString(4),
+                                imageFileId = resultSet.getString(5)
                             )
                         )
                     }
