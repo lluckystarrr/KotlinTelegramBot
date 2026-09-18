@@ -100,8 +100,12 @@ fun updateDictionary(wordsFile: File) {
     Database.getConnection().use { connection ->
         connection.prepareStatement(
             """
-            INSERT OR IGNORE INTO words (text, translate, image_path, image_file_id)
+            INSERT INTO words (text, translate, image_path, image_file_id)
             VALUES (?, ?, ?, ?)
+            ON CONFLICT(text) DO UPDATE SET
+                translate = excluded.translate,
+                image_path = COALESCE(excluded.image_path, words.image_path),
+                image_file_id = COALESCE(excluded.image_file_id, words.image_file_id)
             """.trimIndent()
         ).use { statement ->
 

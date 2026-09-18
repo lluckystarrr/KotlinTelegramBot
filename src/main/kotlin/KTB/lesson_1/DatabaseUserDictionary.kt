@@ -51,35 +51,39 @@ class DatabaseUserDictionary(
         )
 
     override fun setCorrectAnswersCount(word: String, correctAnswersCount: Int) {
-        Database.getConnection().use { connection ->
-            val wordId: Long? = connection.prepareStatement(
-                "SELECT id FROM words WHERE text = ?"
-            ).use { statement ->
-                statement.setString(1, word)
-                statement.executeQuery().use { resultSet ->
-                    if (resultSet.next()) resultSet.getLong(1) else null
+        try {
+            Database.getConnection().use { connection ->
+                val wordId: Long? = connection.prepareStatement(
+                    "SELECT id FROM words WHERE text = ?"
+                ).use { statement ->
+                    statement.setString(1, word)
+                    statement.executeQuery().use { resultSet ->
+                        if (resultSet.next()) resultSet.getLong(1) else null
+                    }
+                }
+
+                if (wordId == null) {
+                    println("Слово не найдено в словаре: $word")
+                    return
+                }
+
+                connection.prepareStatement(
+                    """
+                    INSERT INTO user_answers (user_id, word_id, correct_answer_count, updated_at)
+                    VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+                    ON CONFLICT(user_id, word_id) DO UPDATE SET
+                        correct_answer_count = excluded.correct_answer_count,
+                        updated_at = CURRENT_TIMESTAMP
+                    """.trimIndent()
+                ).use { statement ->
+                    statement.setLong(1, userId)
+                    statement.setLong(2, wordId)
+                    statement.setInt(3, correctAnswersCount)
+                    statement.executeUpdate()
                 }
             }
-
-            if (wordId == null) {
-                println("Слово не найдено в словаре: $word")
-                return
-            }
-
-            connection.prepareStatement(
-                """
-                INSERT INTO user_answers (user_id, word_id, correct_answer_count, updated_at)
-                VALUES (?, ?, ?, CURRENT_TIMESTAMP)
-                ON CONFLICT(user_id, word_id) DO UPDATE SET
-                    correct_answer_count = excluded.correct_answer_count,
-                    updated_at = CURRENT_TIMESTAMP
-                """.trimIndent()
-            ).use { statement ->
-                statement.setLong(1, userId)
-                statement.setLong(2, wordId)
-                statement.setInt(3, correctAnswersCount)
-                statement.executeUpdate()
-            }
+        } catch (e: Exception) {
+            println("Ошибка сохранения прогресса для слова '$word': ${e.message}")
         }
     }
 
