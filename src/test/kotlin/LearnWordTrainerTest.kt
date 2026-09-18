@@ -23,6 +23,21 @@ class LearnWordsTrainerTest {
         File("words_$chatId.txt").delete()
     }
 
+    private fun createFileTrainer(
+        chatId: Long,
+        numberOfQuestionWords: Int = 4,
+        answersCountToLearn: Int = 3
+    ): LearnWordsTrainer =
+        LearnWordsTrainer(
+            chatId = chatId,
+            answersCountToLearn = answersCountToLearn,
+            numberOfQuestionWords = numberOfQuestionWords,
+            dictionary = FileUserDictionary(
+                chatId = chatId,
+                answersCountToLearn = answersCountToLearn
+            )
+        )
+
 
     @Test
     fun `test statistics with 4 words of 7`() {
@@ -41,7 +56,7 @@ class LearnWordsTrainerTest {
             """
         )
 
-        val trainer = LearnWordsTrainer(chatId)
+        val trainer = createFileTrainer(chatId)
 
         assertEquals(
             Statistics(
@@ -69,7 +84,7 @@ class LearnWordsTrainerTest {
             """
         )
 
-        val trainer = LearnWordsTrainer(chatId)
+        val trainer = createFileTrainer(chatId)
 
         assertEquals(
             Statistics(
@@ -98,7 +113,7 @@ class LearnWordsTrainerTest {
             """
         )
 
-        val trainer = LearnWordsTrainer(
+        val trainer = createFileTrainer(
             chatId = chatId,
             numberOfQuestionWords = 4
         )
@@ -133,7 +148,7 @@ class LearnWordsTrainerTest {
             """
         )
 
-        val trainer = LearnWordsTrainer(chatId)
+        val trainer = createFileTrainer(chatId)
 
         val question = trainer.getNextQuestion()
 
@@ -160,7 +175,7 @@ class LearnWordsTrainerTest {
             """
         )
 
-        val trainer = LearnWordsTrainer(chatId)
+        val trainer = createFileTrainer(chatId)
 
         assertNull(
             trainer.getNextQuestion()
@@ -182,7 +197,7 @@ class LearnWordsTrainerTest {
             """
         )
 
-        val trainer = LearnWordsTrainer(chatId)
+        val trainer = createFileTrainer(chatId)
 
         val question = trainer.getNextQuestion()
 
@@ -211,7 +226,7 @@ class LearnWordsTrainerTest {
             """
         )
 
-        val trainer = LearnWordsTrainer(chatId)
+        val trainer = createFileTrainer(chatId)
 
         val question = trainer.getNextQuestion()
 
@@ -242,7 +257,7 @@ class LearnWordsTrainerTest {
             """
         )
 
-        val trainer = LearnWordsTrainer(chatId)
+        val trainer = createFileTrainer(chatId)
 
         assertEquals(
             Statistics(

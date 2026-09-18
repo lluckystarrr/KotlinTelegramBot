@@ -73,7 +73,7 @@ data class EditMessageTextRequest(
     val text: String,
 
     @SerialName("reply_markup")
-val replyMarkup: InlineKeyboardMarkup? = null
+    val replyMarkup: InlineKeyboardMarkup? = null
 )
 
 
@@ -497,7 +497,8 @@ class TelegramBotService(
             EditMessageTextRequest(
                 chatId = chatId,
                 messageId = messageId,
-                text = message
+                text = message,
+                replyMarkup = replyMarkup
             )
 
 
@@ -752,53 +753,58 @@ class TelegramBotService(
 
 
 
+    fun buildMainMenuMarkup(): InlineKeyboardMarkup =
+        InlineKeyboardMarkup(
+            inlineKeyboard = listOf(
+                listOf(
+                    InlineKeyboardButton(
+                        text = "Учить слова",
+                        callbackData = CALLBACK_LEARN_WORDS
+                    )
+                ),
+                listOf(
+                    InlineKeyboardButton(
+                        text = "Статистика",
+                        callbackData = CALLBACK_STATISTICS
+                    )
+                ),
+                listOf(
+                    InlineKeyboardButton(
+                        text = "Сбросить статистику",
+                        callbackData = CALLBACK_RESET_STATISTICS
+                    )
+                )
+            )
+        )
+
+
+
+    fun buildQuestionMarkup(
+        question: Question
+    ): InlineKeyboardMarkup =
+        InlineKeyboardMarkup(
+            inlineKeyboard = listOf(
+                question.variants.mapIndexed { index, word ->
+                    InlineKeyboardButton(
+                        text = word.translate,
+                        callbackData = "$CALLBACK_DATA_ANSWER_PREFIX$index"
+                    )
+                }
+            )
+        )
+
+
+
     fun sendMenu(
         chatId: String
     ): Long? {
 
-
-        val replyMarkup =
-            InlineKeyboardMarkup(
-
-                inlineKeyboard = listOf(
-
-                    listOf(
-                        InlineKeyboardButton(
-                            text = "Учить слова",
-                            callbackData =
-                                CALLBACK_LEARN_WORDS
-                        )
-                    ),
-
-
-                    listOf(
-                        InlineKeyboardButton(
-                            text = "Статистика",
-                            callbackData =
-                                CALLBACK_STATISTICS
-                        )
-                    ),
-
-
-                    listOf(
-                        InlineKeyboardButton(
-                            text = "Сбросить статистику",
-                            callbackData =
-                                CALLBACK_RESET_STATISTICS
-                        )
-                    )
-                )
-            )
-
-
-
         return sendMessage(
             chatId = chatId,
             text = "Главное меню:",
-            replyMarkup = replyMarkup
+            replyMarkup = buildMainMenuMarkup()
         )
     }
-
 
 
 
@@ -807,42 +813,12 @@ class TelegramBotService(
         question: Question
     ): Long? {
 
-
-        val buttons =
-            question.variants.mapIndexed { index, word ->
-
-
-                InlineKeyboardButton(
-
-                    text = word.translate,
-
-                    callbackData =
-                        "$CALLBACK_DATA_ANSWER_PREFIX$index"
-                )
-            }
-
-
-
-        val replyMarkup =
-            InlineKeyboardMarkup(
-
-                inlineKeyboard =
-                    listOf(buttons)
-            )
-
-
-
         return sendMessage(
-
             chatId = chatId,
-
-            text =
-                "Как переводится слово «${question.correctAnswer.original}»?",
-
-            replyMarkup = replyMarkup
+            text = "Как переводится слово «${question.correctAnswer.original}»?",
+            replyMarkup = buildQuestionMarkup(question)
         )
     }
-
 
 
 

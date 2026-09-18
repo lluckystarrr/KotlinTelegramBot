@@ -12,12 +12,10 @@ class DynamicMessage {
     private val messageHistory =
         mutableListOf<SavedMessage>()
 
-
     fun addMessage(
         text: String,
         replyMarkup: InlineKeyboardMarkup? = null
     ) {
-
         messageHistory.add(
             SavedMessage(
                 text = text,
@@ -26,20 +24,20 @@ class DynamicMessage {
         )
     }
 
-
     fun getPreviousMessage(): SavedMessage? {
 
-        if (messageHistory.isEmpty()) {
+        if (messageHistory.size < 2) {
             return null
         }
 
-        return messageHistory.removeLast()
+        messageHistory.removeLast()
+
+        return messageHistory.last()
     }
 
     fun setMessageId(
         id: Long
     ) {
-
         messageId = id
     }
 }
